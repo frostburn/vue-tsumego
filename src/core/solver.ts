@@ -11,6 +11,7 @@ import {
   stonesNot,
   merge,
   coordsOf,
+  clone,
 } from './bitboard'
 import { State, MoveResult, SCORE_Q7_SCALE } from './state'
 
@@ -109,7 +110,7 @@ export class Graph {
 
     result *= this.moves.length
     for (let i = 0; i < this.moves.length; ++i) {
-      if (equals(this.moves[i], state.ko)) {
+      if (equals(this.moves[i]!, state.ko)) {
         result += i
         break
       }
@@ -117,9 +118,9 @@ export class Graph {
 
     for (let i = 0; i < this.moves.length - 1; ++i) {
       result *= 3
-      if (overlaps(this.moves[i], state.player)) {
+      if (overlaps(this.moves[i]!, state.player)) {
         result += 1
-      } else if (overlaps(this.moves[i], state.opponent)) {
+      } else if (overlaps(this.moves[i]!, state.opponent)) {
         result += 2
       }
     }
@@ -149,16 +150,16 @@ export class Graph {
       n = key % 3
       key = (key - n) / 3
       if (n === 1) {
-        merge(result.player, this.moves[i])
+        merge(result.player, this.moves[i]!)
       } else if (n === 2) {
-        merge(result.opponent, this.moves[i])
+        merge(result.opponent, this.moves[i]!)
       }
     }
 
     m = this.moves.length
     n = key % m
     key = (key - n) / m
-    result.ko = this.moves[n]
+    result.ko = clone(this.moves[n]!)
 
     const playerExternal = stonesAnd(this.root.external, this.root.player)
     m = stonesCount(playerExternal) + 1
@@ -200,7 +201,7 @@ export class Graph {
   iterate(): boolean {
     let didChange = false
     for (let key = 0; key < this.lows.length; ++key) {
-      let low = this.lows[key]
+      let low = this.lows[key]!
       let high = MIN_VALUE
       const parent = this.decode(key)
       for (const move of this.moves) {
@@ -219,8 +220,8 @@ export class Graph {
           high = Math.max(high, childScore)
         } else {
           const childKey = this.encode(child)
-          low = Math.max(low, -this.highs[childKey])
-          high = Math.max(high, -this.lows[childKey])
+          low = Math.max(low, -this.highs[childKey]!)
+          high = Math.max(high, -this.lows[childKey]!)
         }
       }
       if (low !== this.lows[key] || high !== this.highs[key]) {
@@ -232,9 +233,9 @@ export class Graph {
     return didChange
   }
 
-  getValueRange(state: State) {
+  getValueRange(state: State): [number, number] {
     const key = this.encode(state)
-    return [this.lows[key] / SCORE_Q7_SCALE, this.highs[key] / SCORE_Q7_SCALE]
+    return [this.lows[key]! / SCORE_Q7_SCALE, this.highs[key]! / SCORE_Q7_SCALE]
   }
 
   getInfo(state: State): SolutionInfo {
@@ -246,7 +247,7 @@ export class Graph {
     let highsLow = -Infinity
     for (let i = 0; i < this.moves.length; ++i) {
       const child = new State(state)
-      const r = child.makeMove(this.moves[i])
+      const r = child.makeMove(this.moves[i]!)
       if (r === MoveResult.Illegal) {
         continue
       }
@@ -262,7 +263,7 @@ export class Graph {
           highsLow = Math.max(highsLow, lowGain)
         }
         childInfo = {
-          ...coordsOf(this.moves[i]),
+          ...coordsOf(this.moves[i]!),
           lowGain,
           highGain,
           lowIdeal: false,
@@ -291,7 +292,7 @@ export class Graph {
           forcing = childLow > -grandHigh
         }
         childInfo = {
-          ...coordsOf(this.moves[i]),
+          ...coordsOf(this.moves[i]!),
           lowGain,
           highGain,
           lowIdeal: false,

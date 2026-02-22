@@ -29,6 +29,8 @@ import {
   stonesCount,
   padStones,
   stripStones,
+  chains,
+  gridOf,
 } from './bitboard'
 
 // Result of making a move
@@ -244,12 +246,12 @@ export class State {
     const height = this.height
     const result = ['\x1b[0;30;46m╔═' + '══'.repeat(width) + '╗\x1b[0m']
     for (let y = 0; y < height; ++y) {
-      const visualArea = this.visualArea[y]
-      const logicalArea = this.logicalArea[y]
-      const target = this.target[y]
-      const immortal = this.immortal[y]
-      const external = this.external[y]
-      const ko = this.ko[y]
+      const visualArea = this.visualArea[y]!
+      const logicalArea = this.logicalArea[y]!
+      const target = this.target[y]!
+      const immortal = this.immortal[y]!
+      const external = this.external[y]!
+      const ko = this.ko[y]!
       let line = '\x1b[0;30;46m║'
       for (let x = 0; x < width; ++x) {
         // Probe
@@ -271,7 +273,7 @@ export class State {
         }
 
         // Stones
-        if (p & black[y]) {
+        if (p & black[y]!) {
           line += '\x1b[30m' // Black
           if (p & target) {
             if (p & immortal) {
@@ -282,12 +284,12 @@ export class State {
             line += ' B'
           } else if (p & external) {
             line += ' +'
-          } else if (p & white[y]) {
+          } else if (p & white[y]!) {
             line += ' #'
           } else {
             line += ' @'
           }
-        } else if (p & white[y]) {
+        } else if (p & white[y]!) {
           line += '\x1b[97m' // Bright White
           if (p & target) {
             if (p & immortal) {
@@ -417,7 +419,7 @@ export class State {
 
     let chain: Stones
 
-    function killChain_() {
+    function killChain_(this: State) {
       flood(chain, this.opponent)
       if (isEmpty(liberties(chain, empty)) && !overlaps(chain, this.immortal)) {
         merge(kill, chain)
@@ -469,8 +471,8 @@ export class State {
     }
 
     // Swap players
-    this.passes = 0
     ;[this.player, this.opponent] = [this.opponent, this.player]
+    this.passes = 0
     this.koThreats = -this.koThreats
     this.button = -this.button
     this.whiteToPlay = !this.whiteToPlay
@@ -480,6 +482,50 @@ export class State {
     }
 
     return result
+  }
+
+  swapPlayers() {
+    ;[this.player, this.opponent] = [this.opponent, this.player]
+    this.ko = emptyStones()
+    this.koThreats = -this.koThreats
+    this.button = -this.button
+    this.whiteToPlay = !this.whiteToPlay
+  }
+
+  flipStones(stones: Stones, flipWhite: boolean) {
+    const player = this.whiteToPlay === flipWhite ? this.player : this.opponent
+    const opponent = this.whiteToPlay === flipWhite ? this.opponent : this.player
+
+    const newImmortal = stonesAnd(this.external, stones)
+    const newExternal = stonesAnd(this.immortal, stones)
+
+    subtract(opponent, stones)
+    subtract(this.target, stones)
+    subtract(this.immortal, stones)
+    subtract(this.external, stones)
+    merge(this.logicalArea, stones)
+    merge(this.immortal, newImmortal)
+    merge(this.external, newExternal)
+    flip(player, stonesXor(stones, newExternal, newImmortal))
+    for (const chain of chains(stonesAnd(player, stonesNot(this.external)))) {
+      if (overlaps(chain, this.immortal)) {
+        merge(this.immortal, chain)
+      }
+      if (overlaps(chain, this.target)) {
+        merge(this.target, chain)
+      }
+    }
+    subtract(this.logicalArea, stonesOr(this.immortal, this.target))
+  }
+
+  availableBlackFlips() {
+    const white = this.whiteToPlay ? this.player : this.opponent
+    return gridOf(stonesXor(this.logicalArea, stonesAnd(this.external, white)))
+  }
+
+  availableWhiteFlips() {
+    const black = this.whiteToPlay ? this.opponent : this.player
+    return gridOf(stonesXor(this.logicalArea, stonesAnd(this.external, black)))
   }
 
   toGrid(): GridItem[] {
@@ -604,5 +650,17 @@ export class State {
   }
   targetLostScore(): number {
     return this.targetLostScoreQ7() / SCORE_Q7_SCALE
+  }
+
+  stretchTo(width: number, height: number) {
+    if ((width || height) && isEmpty(this.visualArea)) {
+      this.visualArea = single(0, 0)
+    }
+    while (this.width < width) {
+      merge(this.visualArea, east(this.visualArea))
+    }
+    while (this.height < height) {
+      merge(this.visualArea, south(this.visualArea))
+    }
   }
 }

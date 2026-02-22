@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { clone, rectangle, stonesXor, single, stoneAt, equals } from '../bitboard'
+import { clone, rectangle, stonesXor, single, stoneAt, equals, east, isEmpty } from '../bitboard'
 import { MoveResult, State } from '../state'
 
 function debug(state: State) {
@@ -29,9 +29,20 @@ function rectangleSixGoban(): State {
   return s
 }
 
+function immortalStraightTwo(): State {
+  const s = new State()
+
+  s.visualArea = rectangle(4, 2)
+  s.logicalArea = east(rectangle(2, 1))
+  s.player = stonesXor(s.visualArea, s.logicalArea)
+  s.immortal = clone(s.player)
+
+  return s
+}
+
 describe('Go game state', () => {
   it('plays through the rectangle six capture mainline', () => {
-    let r: moveResult
+    let r: MoveResult
     const s = rectangleSix()
 
     debug(s)
@@ -71,5 +82,19 @@ describe('Go game state', () => {
     debug(s)
 
     expect(equals(s.ko, single(0, 0))).toBe(true)
+  })
+
+  it("doesn't create a ko square", () => {
+    const s = immortalStraightTwo()
+
+    debug(s)
+
+    s.makeMove(single(-1, -1))
+    s.makeMove(single(1, 0))
+    s.makeMove(single(2, 0))
+
+    debug(s)
+
+    expect(isEmpty(s.ko)).toBe(true)
   })
 })
