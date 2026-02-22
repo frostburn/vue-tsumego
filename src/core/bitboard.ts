@@ -54,7 +54,7 @@ export function stoneDisplayLines(stones: Stones): string[] {
   for (let y = 0; y < stones.length; ++y) {
     let line = '│'
     for (let x = 0; x < WIDTH; ++x) {
-      if (stones[y] & (1 << x)) {
+      if (stones[y]! & (1 << x)) {
         line += ' @'
       } else {
         line += ' .'
@@ -132,7 +132,7 @@ export function equals(a: Stones, b: Stones) {
 
 export function overlaps(a: Stones, b: Stones) {
   for (let i = 0; i < NUM_SLICES; ++i) {
-    if (a[i] & b[i]) {
+    if (a[i]! & b[i]!) {
       return true
     }
   }
@@ -146,7 +146,7 @@ export function overlaps(a: Stones, b: Stones) {
  */
 export function merge(a: Stones, b: Stones) {
   for (let i = 0; i < a.length; ++i) {
-    a[i] |= b[i]
+    a[i]! |= b[i]!
   }
 }
 
@@ -157,7 +157,7 @@ export function merge(a: Stones, b: Stones) {
  */
 export function mask(a: Stones, b: Stones) {
   for (let i = 0; i < a.length; ++i) {
-    a[i] &= b[i]
+    a[i]! &= b[i]!
   }
 }
 
@@ -168,7 +168,7 @@ export function mask(a: Stones, b: Stones) {
  */
 export function flip(a: Stones, b: Stones) {
   for (let i = 0; i < a.length; ++i) {
-    a[i] ^= b[i]
+    a[i]! ^= b[i]!
   }
 }
 
@@ -179,7 +179,7 @@ export function flip(a: Stones, b: Stones) {
  */
 export function subtract(a: Stones, b: Stones) {
   for (let i = 0; i < a.length; ++i) {
-    a[i] &= ~b[i]
+    a[i]! &= ~b[i]!
   }
 }
 
@@ -214,21 +214,21 @@ export function bleed(source: Stones, target: Stones) {
 
   const temp = new Uint32Array(source)
   flooding: while (true) {
-    source[0] |= (source[1] | (source[0] >>> 1) | (source[0] << 1)) & target[0]
+    source[0]! |= (source[1]! | (source[0]! >>> 1) | (source[0]! << 1)) & target[0]!
 
     for (let i = 1; i < NUM_SLICES - 2; ++i) {
-      source[i] |=
-        (source[i - 1] | (source[i] >>> 1) | (source[i] << 1) | source[i + 1]) & target[i]
+      source[i]! |=
+        (source[i - 1]! | (source[i]! >>> 1) | (source[i]! << 1) | source[i + 1]!) & target[i]!
     }
 
-    source[NUM_SLICES - 1] |=
-      (source[NUM_SLICES - 2] | (source[NUM_SLICES - 1] >>> 1) | (source[NUM_SLICES - 1] << 1)) &
-      target[NUM_SLICES - 1]
+    source[NUM_SLICES - 1]! |=
+      (source[NUM_SLICES - 2]! | (source[NUM_SLICES - 1]! >>> 1) | (source[NUM_SLICES - 1]! << 1)) &
+      target[NUM_SLICES - 1]!
 
     for (let i = 0; i < NUM_SLICES; ++i) {
-      if (temp[i] !== source[i]) {
+      if (temp[i]! !== source[i]!) {
         for (let j = 0; j < NUM_SLICES; ++j) {
-          temp[j] = source[j]
+          temp[j] = source[j]!
         }
         continue flooding
       }
@@ -277,7 +277,7 @@ export function stonesAnd(stones: Stones, ...rest: Stones[]): Stones {
   const result = clone(stones)
   for (let i = 0; i < NUM_SLICES; ++i) {
     for (let j = 0; j < rest.length; j++) {
-      result[i] &= rest[j][i]
+      result[i]! &= rest[j]![i]!
     }
   }
   return result
@@ -287,7 +287,7 @@ export function stonesOr(stones: Stones, ...rest: Stones[]): Stones {
   const result = clone(stones)
   for (let i = 0; i < NUM_SLICES; ++i) {
     for (let j = 0; j < rest.length; j++) {
-      result[i] |= rest[j][i]
+      result[i]! |= rest[j]![i]!
     }
   }
   return result
@@ -297,7 +297,7 @@ export function stonesXor(stones: Stones, ...rest: Stones[]): Stones {
   const result = clone(stones)
   for (let i = 0; i < NUM_SLICES; ++i) {
     for (let j = 0; j < rest.length; j++) {
-      result[i] ^= rest[j][i]
+      result[i]! ^= rest[j]![i]!
     }
   }
   return result
@@ -306,29 +306,31 @@ export function stonesXor(stones: Stones, ...rest: Stones[]): Stones {
 export function stonesNot(stones: Stones): Stones {
   const result = clone(stones)
   for (let i = 0; i < result.length; ++i) {
-    result[i] = ~result[i]
+    result[i]! = ~result[i]!
   }
   return result
 }
 
 export function invertInPlace(stones: Stones): Stones {
   for (let i = 0; i < stones.length; ++i) {
-    stones[i] = ~stones[i]
+    stones[i]! = ~stones[i]!
   }
   return stones
 }
 
 export function liberties(stones: Stones, empty: Stones): Stones {
   const result = emptyStones()
-  result[0] = ((stones[0] << 1) | (stones[0] >>> 1) | stones[1]) & ~stones[0] & empty[0]
+  result[0] = ((stones[0]! << 1) | (stones[0]! >>> 1) | stones[1]!) & ~stones[0]! & empty[0]!
   for (let i = 1; i < NUM_SLICES - 1; ++i) {
-    result[i] =
-      (stones[i - 1] | (stones[i] << 1) | (stones[i] >>> 1) | stones[i + 1]) & ~stones[i] & empty[i]
+    result[i]! =
+      (stones[i - 1]! | (stones[i]! << 1) | (stones[i]! >>> 1) | stones[i + 1]!) &
+      ~stones[i]! &
+      empty[i]!
   }
-  result[NUM_SLICES - 1] =
-    (stones[NUM_SLICES - 2] | (stones[NUM_SLICES - 1] << 1) | (stones[NUM_SLICES - 1] >>> 1)) &
-    ~stones[NUM_SLICES - 1] &
-    empty[NUM_SLICES - 1]
+  result[NUM_SLICES - 1]! =
+    (stones[NUM_SLICES - 2]! | (stones[NUM_SLICES - 1]! << 1) | (stones[NUM_SLICES - 1]! >>> 1)) &
+    ~stones[NUM_SLICES - 1]! &
+    empty[NUM_SLICES - 1]!
   return result
 }
 
@@ -349,7 +351,7 @@ export function south(stones: Stones): Stones {
 export function west(stones: Stones): Stones {
   const result = clone(stones)
   for (let i = 0; i < stones.length; ++i) {
-    result[i] >>>= 1
+    result[i]! >>>= 1
   }
   return result
 }
@@ -357,7 +359,7 @@ export function west(stones: Stones): Stones {
 export function east(stones: Stones): Stones {
   const result = clone(stones)
   for (let i = 0; i < stones.length; ++i) {
-    result[i] <<= 1
+    result[i]! <<= 1
   }
   return result
 }
@@ -365,7 +367,10 @@ export function east(stones: Stones): Stones {
 export function isSingle(stones: Stones): boolean {
   let i
   for (i = 0; i < stones.length; ++i) {
-    if (stones[i] && !(stones[i] & (stones[i] - 1))) {
+    if (stones[i]) {
+      if (stones[i]! & (stones[i]! - 1)) {
+        return false
+      }
       for (i++; i < stones.length; ++i) {
         if (stones[i]) {
           return false
@@ -388,7 +393,7 @@ export function stoneAt(stones: Stones, x: number, y: number): boolean {
   if (y < 0 || y >= stones.length) {
     return false
   }
-  return !!(stones[y] & (1 << x))
+  return !!(stones[y]! & (1 << x))
 }
 
 export function dots(stones: Stones): Stones[] {
@@ -409,10 +414,27 @@ export function dots(stones: Stones): Stones[] {
   return result
 }
 
+export function chains(stones: Stones): Stones[] {
+  stones = clone(stones)
+  const result: Stones[] = []
+  for (let i = 0; i < NUM_SLICES; ++i) {
+    for (let j = 0; j < WIDTH; j += 2) {
+      const chain = emptyStones()
+      chain[i] = 3 << j
+      if (overlaps(chain, stones)) {
+        flood(chain, stones)
+        subtract(stones, chain)
+        result.push(chain)
+      }
+    }
+  }
+  return result
+}
+
 export function witherBy(stones: Stones, amount: number) {
   for (let i = 0; i < stones.length; ++i) {
     while (stones[i] && amount) {
-      stones[i] ^= EAST_STONE >>> Math.clz32(stones[i])
+      stones[i]! ^= EAST_STONE >>> Math.clz32(stones[i]!)
       amount--
     }
   }
@@ -422,7 +444,7 @@ export function coordsOf(move: Stones): Coords {
   for (let y = 0; y < move.length; ++y) {
     if (move[y]) {
       return {
-        x: WIDTH - 1 - Math.clz32(move[y]),
+        x: WIDTH - 1 - Math.clz32(move[y]!),
         y,
       }
     }
@@ -433,13 +455,27 @@ export function coordsOf(move: Stones): Coords {
   }
 }
 
+export function gridOf(stones: Stones): Coords[] {
+  const result: Coords[] = []
+  for (let y = 0; y < stones.length; ++y) {
+    if (stones[y]) {
+      for (let x = 0; x < WIDTH; ++x) {
+        if (stones[y]! & (1 << x)) {
+          result.push({ x, y })
+        }
+      }
+    }
+  }
+  return result
+}
+
 /**
  * Convert an `Array` of numbers to `Stones`.
  */
 export function padStones(slices: number[]): Stones {
   const result = emptyStones()
   for (let i = 0; i < slices.length; ++i) {
-    result[i] = slices[i]
+    result[i] = slices[i]!
   }
   return result
 }
