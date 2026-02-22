@@ -1,0 +1,11 @@
+.goban-container {
+  min-width: 28em;
+  max-width: 46em;
+}
+button {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  margin-right: 0.5em;
+  min-width: 5em;
+  height: 3em;
+}
