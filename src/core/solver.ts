@@ -281,7 +281,7 @@ export class Graph {
         if (!highGain) {
           highsLow = Math.max(highsLow, lowGain)
           const grandChild = new State(child)
-          const gr = grandChild.makeMove(emptyStones())
+          const gr = grandChild.makeMove(-1, -1)
           let grandHigh
           if (gr === MoveResult.TakeTarget || gr == MoveResult.SecondPass) {
             grandHigh =

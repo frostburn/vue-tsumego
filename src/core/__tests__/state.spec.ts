@@ -51,7 +51,7 @@ describe('Go game state', () => {
     debug(s)
     expect(r).toBe(MoveResult.Normal)
 
-    r = s.makeMove(single(1, 0))
+    r = s.makeMove(1, 0)
     debug(s)
     expect(r).toBe(MoveResult.Normal)
 
@@ -89,7 +89,7 @@ describe('Go game state', () => {
 
     debug(s)
 
-    s.makeMove(single(-1, -1))
+    s.makeMove(-1, -1)
     s.makeMove(single(1, 0))
     s.makeMove(single(2, 0))
 

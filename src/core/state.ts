@@ -18,9 +18,7 @@ import {
   flood,
   bleed,
   liberties,
-  north,
   east,
-  west,
   south,
   equals,
   isSingle,
@@ -31,6 +29,7 @@ import {
   stripStones,
   chains,
   gridOf,
+  coordsOf,
 } from './bitboard'
 
 // Result of making a move
@@ -344,11 +343,27 @@ export class State {
   }
 
   // Play the single stone indicated by the bitboard
-  makeMove(move: Stones): MoveResult {
+  makeMove(move: Stones): MoveResult
+  makeMove(x: number, y: number): MoveResult
+  makeMove(moveOrX: Stones | number, y?: number): MoveResult {
+    let move: Stones | undefined = undefined
+    let x = -1
+    if (typeof moveOrX === 'number') {
+      x = moveOrX
+      if (y === undefined) {
+        throw new Error('Y-coordinate must be given with x-coordinate')
+      }
+      if (x >= 0) {
+        move = single(x, y)
+      }
+    } else {
+      move = moveOrX
+      ;({ x, y } = coordsOf(move))
+    }
     let result = MoveResult.Normal
     const oldPlayer = clone(this.player)
     // Handle pass
-    if (isEmpty(move)) {
+    if (move === undefined || y === undefined || x < 0) {
       // Award button if still available
       if (this.button === 0) {
         this.button = 1
@@ -427,13 +442,13 @@ export class State {
       }
     }
     const killChain = killChain_.bind(this)
-    chain = north(move)
+    chain = single(x, y - 1)
     killChain()
-    chain = east(move)
+    chain = single(x + 1, y)
     killChain()
-    chain = west(move)
+    chain = single(x - 1, y)
     killChain()
-    chain = south(move)
+    chain = single(x, y + 1)
     killChain()
 
     // Check legality
@@ -542,8 +557,8 @@ export class State {
     for (let y = 0; y < height; ++y) {
       for (let x = 0; x < width; ++x) {
         id++
+        const r = new State(this).makeMove(x, y)
         const move = single(x, y)
-        const r = new State(this).makeMove(move)
         if (overlaps(move, empty)) {
           let t: GridSpace['type'] = 'outside'
           if (overlaps(move, this.external)) {

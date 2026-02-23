@@ -82,7 +82,7 @@ export function logStones(stones: Stones): void {
  */
 export function single(x: number, y: number): Stones {
   const result = emptyStones()
-  if (x >= 0) {
+  if (x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT) {
     result[y] = 1 << x
   }
   return result
