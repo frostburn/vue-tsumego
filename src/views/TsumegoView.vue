@@ -2,7 +2,7 @@
 import('@/assets/tsumego.css')
 
 import { ref, reactive, computed } from 'vue'
-import { rectangle, single } from '../core/bitboard'
+import { rectangle } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
 import { MIN_WIDTH, MIN_HEIGHT, formatGain, passStyle, API_URL } from '../util'
@@ -87,7 +87,7 @@ async function playForcingMove(json: SolutionInfo) {
   if (x < 0) {
     success.value = true
   }
-  const r = gameState.makeMove(single(x, y))
+  const r = gameState.makeMove(x, y)
   if (r <= MoveResult.TakeTarget) {
     return false
   }
@@ -105,7 +105,7 @@ async function play(x: number, y: number) {
       fail.value = true
     }
   }
-  const r = gameState.makeMove(single(x, y))
+  const r = gameState.makeMove(x, y)
   if (r <= MoveResult.TakeTarget) {
     done.value = true
     success.value = true

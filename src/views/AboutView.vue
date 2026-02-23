@@ -11,9 +11,7 @@ straightThree.player = stonesXor(rectangle(4, 2), straightThree.logicalArea)
 straightThree.target = clone(straightThree.player)
 straightThree.opponent = stonesXor(rectangle(5, 3), rectangle(4, 2))
 straightThree.immortal = clone(straightThree.opponent)
-function straightThreePlay(x: number, y: number) {
-  straightThree.makeMove(single(x, y))
-}
+const straightThreePlay = straightThree.makeMove.bind(straightThree)
 
 const straightFour = reactive(new State())
 straightFour.visualArea = rectangle(9, 6)
@@ -23,9 +21,7 @@ straightFour.player = stonesXor(rectangle(5, 2), rectangle(4, 1))
 straightFour.target = clone(straightFour.player)
 straightFour.opponent = stonesXor(rectangle(6, 4), rectangle(5, 2))
 straightFour.immortal = stonesXor(straightFour.opponent, straightFour.external)
-function straightFourPlay(x: number, y: number) {
-  straightFour.makeMove(single(x, y))
-}
+const straightFourPlay = straightFour.makeMove.bind(straightFour)
 
 const bentFour = reactive(new State())
 bentFour.visualArea = rectangle(9, 6)
@@ -37,9 +33,7 @@ bentFour.koThreats = -1
 bentFour.makeMove(single(1, 0))
 bentFour.makeMove(single(0, 0))
 bentFour.makeMove(single(0, 1))
-function bentFourPlay(x: number, y: number) {
-  bentFour.makeMove(single(x, y))
-}
+const bentFourPlay = bentFour.makeMove.bind(bentFour)
 </script>
 
 <template>

@@ -75,7 +75,7 @@ async function play(x: number, y: number) {
   }
   busy.value = true
   if (playMode.value === 'play') {
-    const r = gameState.makeMove(single(x, y))
+    const r = gameState.makeMove(x, y)
     if (r <= MoveResult.TakeTarget) {
       done.value = true
       busy.value = false
