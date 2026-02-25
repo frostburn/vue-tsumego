@@ -5,7 +5,15 @@ import { ref, reactive, computed } from 'vue'
 import { type Coords, rectangle, single, clone } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
-import { MIN_WIDTH, MIN_HEIGHT, formatGain, passStyle, API_URL } from '../util'
+import {
+  MIN_WIDTH,
+  MIN_HEIGHT,
+  formatGain,
+  passStyle,
+  API_URL,
+  getSolutionInfo,
+  markDeadStones,
+} from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import ButtonBar from '../components/ButtonBar.vue'
 
@@ -47,7 +55,7 @@ const myPassStyle = computed(() => passStyle(info.value))
 
 async function onStateChange() {
   busy.value = true
-  await getInfo({ state: gameState.toJSON() })
+  await getInfo()
   busy.value = false
 }
 
@@ -56,17 +64,8 @@ async function swapPlayers() {
   await onStateChange()
 }
 
-async function getInfo(query: { state: StateJSON }) {
-  const response = await fetch(new URL(`tsumego/${props.collection}/`, API_URL), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(query),
-  })
-  const json = await response.json()
-  info.value = json
-  return json
+async function getInfo() {
+  info.value = await getSolutionInfo(props.collection, gameState)
 }
 
 async function play(x: number, y: number) {
@@ -76,6 +75,9 @@ async function play(x: number, y: number) {
   busy.value = true
   if (playMode.value === 'play') {
     const r = gameState.makeMove(x, y)
+    if (r == MoveResult.SecondPass) {
+      await markDeadStones(props.collection, gameState)
+    }
     if (r <= MoveResult.TakeTarget) {
       done.value = true
       busy.value = false
@@ -87,7 +89,7 @@ async function play(x: number, y: number) {
     // Trigger `reactive()`
     gameState.player = clone(gameState.player)
   }
-  await getInfo({ state: gameState.toJSON() })
+  await getInfo()
   busy.value = false
 }
 
@@ -107,8 +109,9 @@ function init() {
       whiteFlips.value = gameState.availableWhiteFlips()
       return json
     })
-    .then(getInfo)
-    .then(() => {
+    .then((json) => getSolutionInfo(props.collection, json))
+    .then((json) => {
+      info.value = json
       busy.value = false
     })
     .catch((err) => (error.value = err))
