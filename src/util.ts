@@ -1,3 +1,5 @@
+import { padStones } from './core/bitboard'
+import { State, type StateJSON } from './core/state'
 import { type SolutionInfo, type MoveInfo } from './core/solver'
 
 export const MIN_WIDTH = 9
@@ -44,3 +46,22 @@ export function passStyle(info: SolutionInfo | undefined) {
 
 // Normalize http://localhost:8xxx vs. /api/
 export const API_URL = new URL(import.meta.env.VITE_API_URL, window.location.origin)
+
+export async function getSolutionInfo(collection: string, state: State | { state: StateJSON }) {
+  if (state instanceof State) {
+    state = { state: state.toJSON() }
+  }
+  const response = await fetch(new URL(`tsumego/${collection}/`, API_URL), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(state),
+  })
+  return await response.json()
+}
+
+export async function markDeadStones(collection: string, state: State) {
+  const json = await getSolutionInfo(collection, state)
+  state.dead = padStones(json.deadStones)
+}

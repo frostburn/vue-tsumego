@@ -68,6 +68,7 @@ function fontSize(info: MoveInfo) {
     </template>
     <circle
       v-for="stone of stones"
+      :class="stone.status"
       :key="stone.id"
       :cx="stone.x"
       :cy="stone.y"
@@ -211,5 +212,8 @@ line {
 text {
   text-anchor: middle;
   dominant-baseline: middle;
+}
+circle.dead {
+  opacity: 60%;
 }
 </style>

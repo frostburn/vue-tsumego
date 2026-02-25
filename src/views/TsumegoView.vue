@@ -5,7 +5,15 @@ import { ref, reactive, computed } from 'vue'
 import { rectangle } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
-import { MIN_WIDTH, MIN_HEIGHT, formatGain, passStyle, API_URL } from '../util'
+import {
+  MIN_WIDTH,
+  MIN_HEIGHT,
+  formatGain,
+  passStyle,
+  API_URL,
+  getSolutionInfo,
+  markDeadStones,
+} from '../util'
 import TheGoban from '../components/TheGoban.vue'
 
 const props = defineProps<{ collection: string; tsumego: string }>()
@@ -56,15 +64,8 @@ const myPassStyle = computed(() => {
   return passStyle(playerInfo.value)
 })
 
-async function getInfo(query: { state: StateJSON }) {
-  const response = await fetch(new URL(`tsumego/${props.collection}/`, API_URL), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(query),
-  })
-  const json = await response.json()
+async function getInfo() {
+  const json = await getSolutionInfo(props.collection, gameState)
   info.value = json
   return json
 }
@@ -88,10 +89,13 @@ async function playForcingMove(json: SolutionInfo) {
     success.value = true
   }
   const r = gameState.makeMove(x, y)
+  if (r == MoveResult.SecondPass) {
+    await markDeadStones(props.collection, gameState)
+  }
   if (r <= MoveResult.TakeTarget) {
     return false
   }
-  await getInfo({ state: gameState.toJSON() })
+  await getInfo()
   return true
 }
 
@@ -106,13 +110,16 @@ async function play(x: number, y: number) {
     }
   }
   const r = gameState.makeMove(x, y)
+  if (r == MoveResult.SecondPass) {
+    await markDeadStones(props.collection, gameState)
+  }
   if (r <= MoveResult.TakeTarget) {
     done.value = true
     success.value = true
     busy.value = false
     return
   }
-  const json = await getInfo({ state: gameState.toJSON() })
+  const json = await getInfo()
   const keepGoing = await playForcingMove(json)
   if (!keepGoing) {
     done.value = true
@@ -143,8 +150,9 @@ function init() {
       gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
       return json
     })
-    .then(getInfo)
+    .then((json) => getSolutionInfo(props.collection, json))
     .then((json) => {
+      info.value = json
       if (data.value.botToPlay) {
         playForcingMove(json)
       }
@@ -174,7 +182,7 @@ init()
       <button @click="play(-1, -1)" :disabled="busy || done" :style="myPassStyle">
         pass {{ passGain }}
       </button>
-      <button v-if="(fail || success || done) && !busy" @click="init">reset</button>
+      <button v-if="fail || success || done" :disabled="busy" @click="init">reset</button>
       <p v-if="fail">Failed</p>
       <p v-else-if="success">Success</p>
       <p v-if="done">Done</p>

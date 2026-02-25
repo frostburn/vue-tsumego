@@ -58,7 +58,7 @@ export enum MoveResult {
 // Capturing target stones ends the game
 // Immortal stones cannot be captured
 // Intangible stones are for aesthetics but please prefer marking outside stones as immortal instead
-export type StoneStatus = 'normal' | 'target' | 'immortal' | 'intangible'
+export type StoneStatus = 'normal' | 'target' | 'immortal' | 'intangible' | 'dead'
 
 // A playing piece on the goban
 export type GridStone = {
@@ -155,6 +155,10 @@ export class State {
   // Indicate which color "player" refers to.
   whiteToPlay: boolean
 
+  // Client-specific bitboard for stones marked for automatic capture
+  // Not sent to the backend server. Obtained from the server
+  dead: Stones
+
   /**
    * Construct a new empty 32x19 goban.
    */
@@ -172,6 +176,7 @@ export class State {
       this.koThreats = 0
       this.button = 0
       this.whiteToPlay = false
+      this.dead = emptyStones()
     } else {
       this.visualArea = clone(state.visualArea)
       this.logicalArea = clone(state.logicalArea)
@@ -185,6 +190,7 @@ export class State {
       this.koThreats = state.koThreats
       this.button = state.button
       this.whiteToPlay = state.whiteToPlay
+      this.dead = clone(state.dead)
     }
   }
 
@@ -204,6 +210,7 @@ export class State {
     this.koThreats = obj.koThreats
     this.button = obj.button
     this.whiteToPlay = obj.whiteToPlay
+    this.dead = emptyStones()
   }
 
   /**
@@ -224,6 +231,7 @@ export class State {
       button: this.button,
       whiteToPlay: this.whiteToPlay,
     }
+    // Dead stones intentionally left out
   }
 
   get width(): number {
@@ -579,6 +587,8 @@ export class State {
           let status: StoneStatus = 'normal'
           if (overlaps(move, this.immortal)) {
             status = 'immortal'
+          } else if (overlaps(move, this.dead)) {
+            status = 'dead'
           } else if (overlaps(move, this.target)) {
             status = 'target'
           } else if (!overlaps(move, this.logicalArea)) {
@@ -615,7 +625,7 @@ export class State {
     return result
   }
 
-  // Area score but only adjacent area is counted
+  // Area score but only adjacent area is counted without removing dead stones
   chineseLibertyScore(): number {
     const empty = stonesOr(
       stonesAnd(this.visualArea, invertInPlace(stonesOr(this.player, this.opponent))),
@@ -632,14 +642,16 @@ export class State {
     return stonesCount(playerControlled) - stonesCount(opponentControlled)
   }
 
-  // Area score without removing dead stones
-  simpleAreaScore(): number {
+  // Area score
+  areaScore(): number {
     const empty = stonesAnd(this.visualArea, invertInPlace(stonesOr(this.player, this.opponent)))
     merge(empty, this.external)
+    merge(empty, this.dead)
 
     const notExt = stonesNot(this.external)
-    const playerControlled = stonesAnd(this.player, notExt)
-    const opponentControlled = stonesAnd(this.opponent, notExt)
+    const notDead = stonesNot(this.dead)
+    const playerControlled = stonesAnd(this.player, notExt, notDead)
+    const opponentControlled = stonesAnd(this.opponent, notExt, notDead)
 
     bleed(playerControlled, empty)
     bleed(opponentControlled, empty)
@@ -650,9 +662,7 @@ export class State {
   // Area score scaled to 16-point fixed-point including bonus for button and remaining ko-threats
   scoreQ7(): number {
     return (
-      this.simpleAreaScore() * SCORE_Q7_SCALE +
-      this.button * BUTTON_Q7 +
-      this.koThreats * KO_THREAT_Q7
+      this.areaScore() * SCORE_Q7_SCALE + this.button * BUTTON_Q7 + this.koThreats * KO_THREAT_Q7
     )
   }
   score(): number {
