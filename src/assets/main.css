@@ -20,3 +20,8 @@ a,
     background-color: hsla(160, 100%, 37%, 0.2);
   }
 }
+
+button {
+  background-color: #ddd;
+  border-color: black;
+}

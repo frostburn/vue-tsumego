@@ -46,7 +46,9 @@ const model = defineModel()
   fill: white;
   opacity: 0;
 }
-.overlay:hover {
-  opacity: 0.2;
+@media (hover: hover) {
+  .overlay:hover {
+    opacity: 0.2;
+  }
 }
 </style>
