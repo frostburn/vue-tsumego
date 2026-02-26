@@ -113,7 +113,7 @@ async function play(x: number, y: number) {
   if (r == MoveResult.SecondPass) {
     await markDeadStones(props.collection, gameState)
   }
-  if (r <= MoveResult.TakeTarget) {
+  if (r !== MoveResult.Illegal && r <= MoveResult.TakeTarget) {
     done.value = true
     success.value = true
     busy.value = false

@@ -3,7 +3,7 @@ import { type Coords } from '../core/bitboard'
 import { type GridSpace, type GridStone, State } from '../core/state'
 import { type SolutionInfo, type MoveInfo } from '../core/solver'
 import { formatGain, fillGain } from '../util'
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps<{
   state: State
@@ -12,10 +12,25 @@ const props = defineProps<{
   blackFlips?: Coords[]
   whiteFlips?: Coords[]
 }>()
-defineEmits(['play'])
+const emit = defineEmits(['play'])
+
+const activeTouchId = ref<number | null>(null)
+const guideX = ref(0)
+const guideY = ref(0)
+const guideLegal = ref(false)
+const guideStone = ref(false)
 
 const width = computed(() => props.state.width)
 const height = computed(() => props.state.height)
+const guideColor = computed(() => {
+  if (props.blackFlips !== undefined) {
+    return 'black'
+  }
+  if (props.whiteFlips !== undefined) {
+    return 'white'
+  }
+  return props.state.whiteToPlay ? 'white' : 'black'
+})
 const colorToPlay = computed(() => (props.state.whiteToPlay ? 'white' : 'black'))
 const otherColor = computed(() => (props.state.whiteToPlay ? 'black' : 'white'))
 
@@ -39,10 +54,104 @@ function fontSize(info: MoveInfo) {
   }
   return `${(1.2 / contents.length).toFixed(4)}px`
 }
+
+function touchedStone(event: TouchEvent): SVGCircleElement | null {
+  for (const touch of event.changedTouches) {
+    if (touch.identifier === activeTouchId.value) {
+      return (
+        document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.touch-stone') ?? null
+      )
+    }
+  }
+  return null
+}
+
+function onTouchStart(event: TouchEvent) {
+  if (props.busy) {
+    return
+  }
+  event.preventDefault()
+  if (!event.changedTouches.length) {
+    return
+  }
+  const touch = event.changedTouches[0]!
+  activeTouchId.value = touch.identifier
+  const stone = touchedStone(event)
+  if (stone !== null) {
+    guideX.value = stone.cx.baseVal.value
+    guideY.value = stone.cy.baseVal.value
+    guideLegal.value = stone.classList.contains('preview-stone')
+    guideStone.value = true
+  } else {
+    const svg = (event.target as Element).closest('svg')
+    if (svg === null) {
+      return
+    }
+    let pt = svg.createSVGPoint()
+    pt.x = touch.clientX
+    pt.y = touch.clientY
+    pt = pt.matrixTransform(svg.getScreenCTM()!.inverse())
+    guideX.value = Math.round(pt.x)
+    guideY.value = Math.round(pt.y)
+    guideStone.value = false
+  }
+}
+
+function onTouchMove(event: TouchEvent) {
+  if (props.busy) {
+    return
+  }
+  event.preventDefault()
+  const stone = touchedStone(event)
+  if (stone !== null) {
+    guideX.value = stone.cx.baseVal.value
+    guideY.value = stone.cy.baseVal.value
+    guideLegal.value = stone.classList.contains('preview-stone')
+    guideStone.value = true
+  } else {
+    guideStone.value = false
+  }
+}
+
+function onTouchEnd(event: TouchEvent) {
+  if (props.busy) {
+    return
+  }
+  event.preventDefault()
+  const stone = touchedStone(event)
+  if (stone !== null) {
+    guideX.value = stone.cx.baseVal.value
+    guideY.value = stone.cy.baseVal.value
+    if (stone.classList.contains('preview-stone')) {
+      emit('play', guideX.value, guideY.value)
+    }
+  }
+  onTouchCancel(event)
+}
+
+function onTouchCancel(event: TouchEvent) {
+  guideLegal.value = false
+  guideStone.value = false
+  for (const touch of event.changedTouches) {
+    if (touch.identifier === activeTouchId.value) {
+      activeTouchId.value = null
+      return
+    }
+  }
+}
 </script>
 
 <template>
-  <svg width="100%" height="100%" :viewBox="viewBox" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="100%"
+    height="100%"
+    :viewBox="viewBox"
+    xmlns="http://www.w3.org/2000/svg"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
+    @touchcancel="onTouchCancel"
+  >
     <rect
       class="wood"
       x="-0.6"
@@ -67,14 +176,38 @@ function fontSize(info: MoveInfo) {
       <text :x="info.x" :y="info.y" :font-size="fontSize(info)">{{ formatGain(info) }}</text>
     </template>
     <circle
+      v-show="guideStone"
+      :cx="guideX"
+      :cy="guideY"
+      r="0.4"
+      :fill="guideColor"
+      opacity="0.7"
+    />
+    <circle
       v-for="stone of stones"
-      :class="stone.status"
+      :class="[stone.status, 'touch-stone']"
       :key="stone.id"
       :cx="stone.x"
       :cy="stone.y"
       r="0.4"
       :fill="stone.type"
     />
+    <g v-show="activeTouchId !== null">
+      <line
+        :class="{ guide: true, legal: guideLegal }"
+        x1="-1"
+        :x2="width + 1"
+        :y1="guideY"
+        :y2="guideY"
+      />
+      <line
+        :class="{ guide: true, legal: guideLegal }"
+        y1="-1"
+        :y2="height + 1"
+        :x1="guideX"
+        :x2="guideX"
+      />
+    </g>
     <template v-for="space of spaces" :key="space.id">
       <rect
         v-if="space.type === 'ko'"
@@ -109,11 +242,12 @@ function fontSize(info: MoveInfo) {
         opacity="0.6"
       />
       <circle
-        v-if="space.playable && !busy && !blackFlips && !whiteFlips"
-        class="preview-stone"
+        v-if="!blackFlips && !whiteFlips"
+        :class="{ 'preview-stone': space.playable && !busy, 'touch-stone': true }"
         :cx="space.x"
         :cy="space.y"
         r="0.4"
+        opacity="0"
         :fill="colorToPlay"
         @click="$emit('play', space.x, space.y)"
       />
@@ -130,35 +264,33 @@ function fontSize(info: MoveInfo) {
         />
       </template>
       <template v-for="stone of stones" :key="stone.id">
-        <rect
-          v-if="stone.status === 'immortal'"
-          class="outside"
-          :x="stone.x - 0.5"
-          :y="stone.y - 0.5"
-          width="1"
-          height="1"
-        />
+        <template v-if="stone.status === 'immortal'">
+          <rect class="outside" :x="stone.x - 0.5" :y="stone.y - 0.5" width="1" height="1" />
+          <circle class="touch-stone" :cx="stone.x" :cy="stone.y" r="0.4" opacity="0.5" />
+        </template>
       </template>
     </g>
     <template v-if="!busy">
       <circle
         v-for="(flip, i) of blackFlips || []"
-        class="preview-stone flip"
+        class="preview-stone flip touch-stone"
         :key="i"
         :cx="flip.x"
         :cy="flip.y"
         r="0.4"
+        opacity="0"
         fill="black"
         stroke="darkgray"
         @click="$emit('play', flip.x, flip.y)"
       />
       <circle
         v-for="(flip, i) of whiteFlips || []"
-        class="preview-stone flip"
+        class="preview-stone flip touch-stone"
         :key="i"
         :cx="flip.x"
         :cy="flip.y"
         r="0.4"
+        opacity="0"
         fill="white"
         stroke="lightgray"
         @click="$emit('play', flip.x, flip.y)"
@@ -200,11 +332,10 @@ line {
 .outside {
   fill: black;
 }
-.preview-stone {
-  opacity: 0%;
-}
-.preview-stone:hover {
-  opacity: 80%;
+@media (hover: hover) {
+  .preview-stone:hover {
+    opacity: 80%;
+  }
 }
 .flip {
   stroke-width: 0.03;
@@ -215,5 +346,13 @@ text {
 }
 circle.dead {
   opacity: 60%;
+}
+line.guide {
+  stroke-width: 0.06;
+  stroke: purple;
+  opacity: 90%;
+}
+line.guide.legal {
+  stroke: red;
 }
 </style>
