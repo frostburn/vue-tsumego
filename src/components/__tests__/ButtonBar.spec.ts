@@ -5,7 +5,7 @@ import ButtonBar from '../ButtonBar.vue'
 
 describe('ButtonBar', () => {
   it('renders properly', () => {
-    const wrapper = mount(ButtonBar)
+    const wrapper = mount(ButtonBar, { propsData: { whiteToPlay: false } })
     expect(wrapper.findAll('.background')).toHaveLength(1)
     expect(wrapper.findAll('.overlay')).toHaveLength(3)
   })
