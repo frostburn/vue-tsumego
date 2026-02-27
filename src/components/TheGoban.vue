@@ -17,8 +17,6 @@ const emit = defineEmits(['play'])
 const activeTouchId = ref<number | null>(null)
 const guideX = ref(0)
 const guideY = ref(0)
-const guideLegal = ref(false)
-const guideStone = ref(false)
 
 const width = computed(() => props.state.width)
 const height = computed(() => props.state.height)
@@ -43,6 +41,32 @@ const spaces = computed<GridSpace[]>(
   () => grid.value.filter((item) => item.type !== 'black' && item.type !== 'white') as GridSpace[],
 )
 
+const guideLegal = computed(() => {
+  if (activeTouchId.value === null) {
+    return false
+  }
+  if (props.blackFlips !== undefined) {
+    for (const flip of props.blackFlips) {
+      if (flip.x === guideX.value && flip.y === guideY.value) {
+        return true
+      }
+    }
+  } else if (props.whiteFlips !== undefined) {
+    for (const flip of props.whiteFlips) {
+      if (flip.x === guideX.value && flip.y === guideY.value) {
+        return true
+      }
+    }
+  } else {
+    for (const space of spaces.value) {
+      if (space.playable && space.x === guideX.value && space.y === guideY.value) {
+        return true
+      }
+    }
+  }
+  return false
+})
+
 const viewBox = computed(() => {
   return `-0.7 -0.7 ${width.value + 0.4} ${height.value + 0.4}`
 })
@@ -55,12 +79,18 @@ function fontSize(info: MoveInfo) {
   return `${(1.2 / contents.length).toFixed(4)}px`
 }
 
-function touchedStone(event: TouchEvent): SVGCircleElement | null {
+// Temp variables for screen coords to SVG conversion
+let ctm: DOMMatrix | null = null
+let pt: SVGPoint | null = null
+function touchGuide(event: TouchEvent) {
   for (const touch of event.changedTouches) {
     if (touch.identifier === activeTouchId.value) {
-      return (
-        document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.touch-stone') ?? null
-      )
+      pt!.x = touch.clientX
+      pt!.y = touch.clientY
+      pt = pt!.matrixTransform(ctm!)
+      guideX.value = Math.round(pt.x)
+      guideY.value = Math.round(pt.y)
+      return
     }
   }
   return null
@@ -71,30 +101,20 @@ function onTouchStart(event: TouchEvent) {
     return
   }
   event.preventDefault()
+
+  const svg = (event.target as Element).closest('svg')
+  if (svg === null) {
+    return
+  }
+
   if (!event.changedTouches.length) {
     return
   }
-  const touch = event.changedTouches[0]!
-  activeTouchId.value = touch.identifier
-  const stone = touchedStone(event)
-  if (stone !== null) {
-    guideX.value = stone.cx.baseVal.value
-    guideY.value = stone.cy.baseVal.value
-    guideLegal.value = stone.classList.contains('preview-stone')
-    guideStone.value = true
-  } else {
-    const svg = (event.target as Element).closest('svg')
-    if (svg === null) {
-      return
-    }
-    let pt = svg.createSVGPoint()
-    pt.x = touch.clientX
-    pt.y = touch.clientY
-    pt = pt.matrixTransform(svg.getScreenCTM()!.inverse())
-    guideX.value = Math.round(pt.x)
-    guideY.value = Math.round(pt.y)
-    guideStone.value = false
-  }
+  activeTouchId.value = event.changedTouches[0]!.identifier
+
+  ctm = svg.getScreenCTM()!.inverse()
+  pt = svg.createSVGPoint()
+  touchGuide(event)
 }
 
 function onTouchMove(event: TouchEvent) {
@@ -102,15 +122,7 @@ function onTouchMove(event: TouchEvent) {
     return
   }
   event.preventDefault()
-  const stone = touchedStone(event)
-  if (stone !== null) {
-    guideX.value = stone.cx.baseVal.value
-    guideY.value = stone.cy.baseVal.value
-    guideLegal.value = stone.classList.contains('preview-stone')
-    guideStone.value = true
-  } else {
-    guideStone.value = false
-  }
+  touchGuide(event)
 }
 
 function onTouchEnd(event: TouchEvent) {
@@ -118,20 +130,14 @@ function onTouchEnd(event: TouchEvent) {
     return
   }
   event.preventDefault()
-  const stone = touchedStone(event)
-  if (stone !== null) {
-    guideX.value = stone.cx.baseVal.value
-    guideY.value = stone.cy.baseVal.value
-    if (stone.classList.contains('preview-stone')) {
-      emit('play', guideX.value, guideY.value)
-    }
+  touchGuide(event)
+  if (guideLegal.value) {
+    emit('play', guideX.value, guideY.value)
   }
   onTouchCancel(event)
 }
 
 function onTouchCancel(event: TouchEvent) {
-  guideLegal.value = false
-  guideStone.value = false
   for (const touch of event.changedTouches) {
     if (touch.identifier === activeTouchId.value) {
       activeTouchId.value = null
@@ -176,7 +182,7 @@ function onTouchCancel(event: TouchEvent) {
       <text :x="info.x" :y="info.y" :font-size="fontSize(info)">{{ formatGain(info) }}</text>
     </template>
     <circle
-      v-show="guideStone"
+      v-show="guideLegal"
       :cx="guideX"
       :cy="guideY"
       r="0.4"
@@ -185,7 +191,7 @@ function onTouchCancel(event: TouchEvent) {
     />
     <circle
       v-for="stone of stones"
-      :class="[stone.status, 'touch-stone']"
+      :class="stone.status"
       :key="stone.id"
       :cx="stone.x"
       :cy="stone.y"
@@ -243,7 +249,7 @@ function onTouchCancel(event: TouchEvent) {
       />
       <circle
         v-if="!blackFlips && !whiteFlips"
-        :class="{ 'preview-stone': space.playable && !busy, 'touch-stone': true }"
+        :class="{ 'preview-stone': space.playable && !busy }"
         :cx="space.x"
         :cy="space.y"
         r="0.4"
@@ -264,16 +270,20 @@ function onTouchCancel(event: TouchEvent) {
         />
       </template>
       <template v-for="stone of stones" :key="stone.id">
-        <template v-if="stone.status === 'immortal'">
-          <rect class="outside" :x="stone.x - 0.5" :y="stone.y - 0.5" width="1" height="1" />
-          <circle class="touch-stone" :cx="stone.x" :cy="stone.y" r="0.4" opacity="0.5" />
-        </template>
+        <rect
+          v-if="stone.status === 'immortal'"
+          class="outside"
+          :x="stone.x - 0.5"
+          :y="stone.y - 0.5"
+          width="1"
+          height="1"
+        />
       </template>
     </g>
     <template v-if="!busy">
       <circle
         v-for="(flip, i) of blackFlips || []"
-        class="preview-stone flip touch-stone"
+        class="preview-stone flip"
         :key="i"
         :cx="flip.x"
         :cy="flip.y"
@@ -285,7 +295,7 @@ function onTouchCancel(event: TouchEvent) {
       />
       <circle
         v-for="(flip, i) of whiteFlips || []"
-        class="preview-stone flip touch-stone"
+        class="preview-stone flip"
         :key="i"
         :cx="flip.x"
         :cy="flip.y"
