@@ -32,6 +32,7 @@ const fail = ref(false)
 const busy = ref(true)
 
 const whiteToPlay = ref(false)
+const koThreats = ref(0)
 
 const gameState = reactive(new State())
 gameState.visualArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
@@ -113,10 +114,14 @@ async function play(x: number, y: number) {
     }
   }
   const r = gameState.makeMove(x, y)
+  if (r == MoveResult.Illegal) {
+    busy.value = false
+    return
+  }
   if (r == MoveResult.SecondPass) {
     await markDeadStones(props.collection, gameState)
   }
-  if (r !== MoveResult.Illegal && r <= MoveResult.TakeTarget) {
+  if (r <= MoveResult.TakeTarget) {
     done.value = true
     success.value = true
     busy.value = false
@@ -136,6 +141,7 @@ async function play(x: number, y: number) {
     playerInfo.value = info.value
   }
   busy.value = false
+  koThreats.value = gameState.koThreats
 }
 
 function init() {
@@ -163,6 +169,7 @@ function init() {
     .then(() => {
       busy.value = false
       whiteToPlay.value = gameState.whiteToPlay
+      koThreats.value = gameState.koThreats
     })
     .catch((err) => (error.value = err))
 }
@@ -193,6 +200,7 @@ init()
 
         <button v-if="fail || success || done" :disabled="busy" @click="init">reset</button>
       </div>
+      <p>Ko-threats: {{ koThreats }}</p>
       <p v-if="fail">Failed</p>
       <p v-else-if="success">Success</p>
       <p v-if="done">Done</p>
