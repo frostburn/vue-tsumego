@@ -2,7 +2,7 @@
 import('@/assets/tsumego.css')
 
 import { ref, reactive, computed } from 'vue'
-import { type Coords, rectangle, single, clone } from '../core/bitboard'
+import { type Coords, rectangle, single, clone, emptyStones } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
 import {
@@ -30,6 +30,8 @@ const done = ref(false)
 const gameState = reactive(new State())
 gameState.visualArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 gameState.logicalArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
+
+const external = ref(emptyStones())
 
 const maxThreats = ref(0)
 const info = ref<SolutionInfo | undefined>(undefined)
@@ -88,7 +90,7 @@ async function play(x: number, y: number) {
       return
     }
   } else {
-    gameState.flipStones(single(x, y), playMode.value === 'white')
+    gameState.flipStones(single(x, y), external.value, playMode.value === 'white')
 
     // Trigger `reactive()`
     gameState.player = clone(gameState.player)
@@ -111,6 +113,7 @@ function init() {
       gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
       blackFlips.value = gameState.availableBlackFlips()
       whiteFlips.value = gameState.availableWhiteFlips()
+      external.value = clone(gameState.external)
       return json
     })
     .then((json) => getSolutionInfo(props.collection, json))

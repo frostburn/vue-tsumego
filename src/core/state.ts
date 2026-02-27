@@ -515,12 +515,12 @@ export class State {
     this.whiteToPlay = !this.whiteToPlay
   }
 
-  flipStones(stones: Stones, flipWhite: boolean) {
+  flipStones(stones: Stones, external: Stones, flipWhite: boolean) {
     const player = this.whiteToPlay === flipWhite ? this.player : this.opponent
     const opponent = this.whiteToPlay === flipWhite ? this.opponent : this.player
 
     const newImmortal = stonesAnd(this.external, stones)
-    const newExternal = stonesAnd(this.immortal, stones)
+    const newExternal = stonesAnd(this.immortal, external, stones)
 
     subtract(opponent, stones)
     subtract(this.target, stones)
