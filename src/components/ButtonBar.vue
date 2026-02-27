@@ -1,4 +1,7 @@
 <script setup lang="ts">
+defineProps<{
+  whiteToPlay: boolean
+}>()
 const model = defineModel()
 </script>
 
@@ -21,6 +24,8 @@ const model = defineModel()
       <rect v-show="model === 'play'" class="selected" x="0" y="0" width="1" height="1" />
       <circle cx="0.5" cy="0.5" r="0.4" fill="white" mask="url(#bottom-half)" />
       <circle cx="0.5" cy="0.5" r="0.4" fill="black" mask="url(#top-half)" />
+
+      <circle cx="0.5" cy="0.5" r="0.23" :fill="whiteToPlay ? 'white' : 'black'" opacity="0.8" />
 
       <rect v-show="model === 'black'" class="selected" x="1" y="0" width="1" height="1" />
       <circle cx="1.5" cy="0.5" r="0.4" fill="black" />

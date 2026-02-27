@@ -142,7 +142,7 @@ init()
         <button @click="swapPlayers" :disabled="busy || done">swap players</button>
       </div>
       <div class="button-bar-container">
-        <ButtonBar v-model="playMode" />
+        <ButtonBar :whiteToPlay="gameState.whiteToPlay" v-model="playMode" />
       </div>
       <div>
         <label for="ko-threats">Ko-threats: </label>

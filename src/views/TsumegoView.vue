@@ -15,6 +15,7 @@ import {
   markDeadStones,
 } from '../util'
 import TheGoban from '../components/TheGoban.vue'
+import PlayerIndicator from '../components/PlayerIndicator.vue'
 
 const props = defineProps<{ collection: string; tsumego: string }>()
 
@@ -29,6 +30,8 @@ const success = ref(false)
 const fail = ref(false)
 
 const busy = ref(true)
+
+const whiteToPlay = ref(false)
 
 const gameState = reactive(new State())
 gameState.visualArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
@@ -159,6 +162,7 @@ function init() {
     })
     .then(() => {
       busy.value = false
+      whiteToPlay.value = gameState.whiteToPlay
     })
     .catch((err) => (error.value = err))
 }
@@ -179,10 +183,16 @@ init()
           @play="play"
         />
       </div>
-      <button @click="play(-1, -1)" :disabled="busy || done" :style="myPassStyle">
-        pass {{ passGain }}
-      </button>
-      <button v-if="fail || success || done" :disabled="busy" @click="init">reset</button>
+      <div class="controls">
+        <button @click="play(-1, -1)" :disabled="busy || done" :style="myPassStyle">
+          pass {{ passGain }}
+        </button>
+        <span class="indicator-container">
+          <PlayerIndicator :whiteToPlay="whiteToPlay" />
+        </span>
+
+        <button v-if="fail || success || done" :disabled="busy" @click="init">reset</button>
+      </div>
       <p v-if="fail">Failed</p>
       <p v-else-if="success">Success</p>
       <p v-if="done">Done</p>
@@ -190,3 +200,15 @@ init()
     <h2 v-if="error">{{ error.message }}</h2>
   </main>
 </template>
+
+<style scoped>
+.controls {
+  display: flex;
+}
+.indicator-container {
+  display: inline-block;
+  width: 3.9em;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+</style>
