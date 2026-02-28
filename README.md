@@ -1,5 +1,9 @@
 # vue-tsumego
 
+![og-image](https://github.com/frostburn/vue-tsumego/blob/main/static/lifedeathindex.png)
+
+The frontend for [tinytsumego2](https://github.com/frostburn/tinytsumego2/).
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
