@@ -110,7 +110,9 @@ function init() {
       json.state = json.root
       data.value = json
       gameState.assignFromJSON(json.state)
-      gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+      if (json.canStretch) {
+        gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+      }
       blackFlips.value = gameState.availableBlackFlips()
       whiteFlips.value = gameState.availableWhiteFlips()
       external.value = clone(gameState.external)

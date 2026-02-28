@@ -156,7 +156,9 @@ function init() {
     .then((json) => {
       data.value = json
       gameState.assignFromJSON(json.state)
-      gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+      if (json.canStretch) {
+        gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+      }
       return json
     })
     .then((json) => getSolutionInfo(props.collection, json))
