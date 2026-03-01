@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { clone, rectangle, stonesXor } from '../bitboard'
 import { State, TARGET_CAPTURED_SCORE, BUTTON_BONUS } from '../state'
-import { Graph } from '../solver'
+import { Graph, encode, decode } from '../solver'
 
 function straightTwo(): State {
   const s = new State()
@@ -34,8 +34,8 @@ describe('Go game graph', () => {
     expect(g.lows.length).toBe(324)
 
     for (let i = 0; i < g.lows.length; ++i) {
-      const s = g.decode(i)
-      const key = g.encode(s)
+      const s = decode(g.root, i)
+      const key = encode(g.root, s)
       expect(key).toBe(i)
     }
 
@@ -91,8 +91,8 @@ describe('Go game graph', () => {
     expect(g.highs.length).toBe(1296)
 
     for (let i = 0; i < g.highs.length; ++i) {
-      const s = g.decode(i)
-      const key = g.encode(s)
+      const s = decode(g.root, i, g.moves)
+      const key = encode(g.root, s, g.moves)
       expect(key).toBe(i)
     }
 
