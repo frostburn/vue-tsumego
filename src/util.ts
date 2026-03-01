@@ -65,3 +65,25 @@ export async function markDeadStones(collection: string, state: State) {
   const json = await getSolutionInfo(collection, state)
   state.dead = padStones(json.deadStones)
 }
+
+const URL_SAFE_CHARS64 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
+
+export function encode64(n: number): string {
+  if (n < 0 || !Number.isInteger(n)) {
+    throw new Error('Input must be a non-negative integer')
+  }
+  let result = ''
+  while (n) {
+    result += URL_SAFE_CHARS64[n % 64]
+    n = Math.floor(n / 64)
+  }
+  return result
+}
+
+export function decode64(s: string): number {
+  let result = 0
+  for (let i = s.length - 1; i >= 0; --i) {
+    result = result * 64 + URL_SAFE_CHARS64.indexOf(s[i]!)
+  }
+  return result
+}
