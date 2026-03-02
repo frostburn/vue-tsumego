@@ -12,6 +12,8 @@ import {
   merge,
   coordsOf,
   clone,
+  clear,
+  stonesXor,
 } from './bitboard'
 import { State, MoveResult, SCORE_Q7_SCALE } from './state'
 
@@ -81,18 +83,13 @@ export function encode(root: State, state: State, moves?: Stones[]): number {
   result = 3 * result + state.button + 1
 
   result = (2 * Math.abs(root.koThreats) + 1) * result + state.koThreats
-  let player = state.player
-  let opponent = state.opponent
-  if (state.whiteToPlay !== root.whiteToPlay) {
-    player = state.opponent
-    opponent = state.player
-  }
+
   result =
     (stonesCount(stonesAnd(root.external, root.opponent)) + 1) * result +
-    stonesCount(stonesAnd(root.external, opponent))
+    stonesCount(stonesAnd(state.external, root.opponent))
   result =
     (stonesCount(stonesAnd(root.external, root.player)) + 1) * result +
-    stonesCount(stonesAnd(root.external, player))
+    stonesCount(stonesAnd(state.external, root.player))
 
   result *= moves.length
   for (let i = 0; i < moves.length; ++i) {
@@ -126,6 +123,7 @@ export function decode(root: State, key: number, moves?: Stones[]): State {
   const effectiveArea = stonesAnd(result.logicalArea, stonesNot(result.external))
   subtract(result.player, effectiveArea)
   subtract(result.opponent, effectiveArea)
+  clear(result.external)
 
   let m = 2
   let n = key % m
@@ -163,13 +161,10 @@ export function decode(root: State, key: number, moves?: Stones[]): State {
   key = (key - n) / m
   witherBy(opponentExternal, m - 1 - n)
 
-  if (result.whiteToPlay === root.whiteToPlay) {
-    merge(result.player, playerExternal)
-    merge(result.opponent, opponentExternal)
-  } else {
-    merge(result.opponent, playerExternal)
-    merge(result.player, opponentExternal)
-  }
+  merge(result.external, playerExternal)
+  merge(result.external, opponentExternal)
+  merge(result.immortal, stonesXor(root.external, result.external))
+  subtract(result.logicalArea, result.immortal)
 
   m = 2 * Math.abs(root.koThreats) + 1
   n = key % m

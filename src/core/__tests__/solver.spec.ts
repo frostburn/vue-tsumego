@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest'
 
-import { clone, rectangle, stonesXor } from '../bitboard'
+import { clone, rectangle, stonesXor, south, merge } from '../bitboard'
 import { State, TARGET_CAPTURED_SCORE, BUTTON_BONUS } from '../state'
 import { Graph, encode, decode } from '../solver'
+
+function debug(state: State) {
+  // Shush linter
+  state.passes += 0
+  // state.log()
+}
 
 function straightTwo(): State {
   const s = new State()
@@ -23,6 +29,19 @@ function straightThree(): State {
   s.player = stonesXor(s.visualArea, s.logicalArea)
   s.target = clone(s.player)
 
+  return s
+}
+
+function rectangleSix(): State {
+  const s = new State()
+  s.visualArea = rectangle(4, 5)
+  s.logicalArea = rectangle(3, 2)
+  s.external = south(south(south(rectangle(2, 1))))
+  merge(s.logicalArea, s.external)
+  s.opponent = stonesXor(rectangle(4, 3), rectangle(3, 2))
+  s.target = clone(s.opponent)
+  s.player = south(south(south(rectangle(4, 2))))
+  s.immortal = stonesXor(s.player, s.external)
   return s
 }
 
@@ -123,5 +142,36 @@ describe('Go game graph', () => {
     expect(didChange).toBe(false)
     const score = TARGET_CAPTURED_SCORE - BUTTON_BONUS
     expect(g.getValueRange(root)).toEqual([score, score])
+  })
+})
+
+describe('State encoder', () => {
+  it('encodes external liberties', () => {
+    const root = rectangleSix()
+    debug(root)
+
+    const state = new State(root)
+    state.makeMove(1, 1)
+    debug(state)
+
+    let encoded = encode(root, state)
+    expect(encoded).toBe(695591)
+
+    let decoded = decode(root, encoded)
+    debug(decoded)
+
+    expect(state.equals(decoded)).toBe(true)
+
+    state.makeMove(1, 0)
+    state.makeMove(1, 3)
+    debug(state)
+
+    encoded = encode(root, state)
+    expect(encoded).toBe(578951)
+
+    decoded = decode(root, encoded)
+    debug(decoded)
+
+    expect(state.equals(decoded)).toBe(true)
   })
 })

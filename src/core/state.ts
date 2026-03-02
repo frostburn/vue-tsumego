@@ -688,4 +688,20 @@ export class State {
       merge(this.visualArea, south(this.visualArea))
     }
   }
+
+  equals(other: State): boolean {
+    return (
+      equals(this.visualArea, other.visualArea) &&
+      equals(this.logicalArea, other.logicalArea) &&
+      equals(this.player, other.player) &&
+      equals(this.opponent, other.opponent) &&
+      equals(this.ko, other.ko) &&
+      equals(this.target, other.target) &&
+      equals(this.immortal, other.immortal) &&
+      equals(this.external, other.external) &&
+      this.passes === other.passes &&
+      this.koThreats === other.koThreats &&
+      this.whiteToPlay === other.whiteToPlay
+    )
+  }
 }
