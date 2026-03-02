@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import('@/assets/tsumego.css')
 
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { type Coords, rectangle, single, clone, emptyStones } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
@@ -13,6 +14,8 @@ import {
   API_URL,
   getSolutionInfo,
   markDeadStones,
+  encodeQuery,
+  decodeQuery,
 } from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import ButtonBar from '../components/ButtonBar.vue'
@@ -40,6 +43,14 @@ const playMode = ref<'play' | 'black' | 'white'>('play')
 
 const blackFlips = ref<Coords[]>([])
 const whiteFlips = ref<Coords[]>([])
+
+const sharedURL = ref('')
+
+const sharedURLSplash = ref(false)
+
+let root = new State()
+const route = useRoute()
+const router = useRouter()
 
 const passGain = computed(() => {
   if (info.value === undefined) {
@@ -99,6 +110,22 @@ async function play(x: number, y: number) {
   busy.value = false
 }
 
+function sharePosition(name: string) {
+  const href = router.resolve({
+    name,
+    params: { collection: props.collection },
+    query: { s: encodeQuery(root, gameState) },
+  }).href
+  sharedURL.value = new URL(href, window.location.origin).toString()
+  if (window.navigator.clipboard) {
+    window.navigator.clipboard.writeText(sharedURL.value)
+    sharedURLSplash.value = true
+    window.setTimeout(() => {
+      sharedURLSplash.value = false
+    }, 3000)
+  }
+}
+
 function init() {
   busy.value = true
   done.value = false
@@ -116,6 +143,11 @@ function init() {
       blackFlips.value = gameState.availableBlackFlips()
       whiteFlips.value = gameState.availableWhiteFlips()
       external.value = clone(gameState.external)
+      root = new State(gameState)
+      if (route.query?.s && !Array.isArray(route.query.s)) {
+        const state = decodeQuery(root, route.query.s)
+        gameState.assignFromJSON(state.toJSON())
+      }
       return json
     })
     .then((json) => getSolutionInfo(props.collection, json))
@@ -126,7 +158,7 @@ function init() {
     .catch((err) => (error.value = err))
 }
 
-init()
+onMounted(init)
 </script>
 
 <template>
@@ -177,7 +209,19 @@ init()
       </div>
       <div>
         <button @click="init" :disabled="busy">reset</button>
+        <button @click="sharePosition('explore')" :disabled="busy">share position</button>
+        <button @click="sharePosition('custom-tsumego')" :disabled="busy">share problem</button>
       </div>
+      <div>
+        <input
+          class="shared-url"
+          v-if="sharedURL.length"
+          type="text"
+          v-model="sharedURL"
+          readonly
+        />
+      </div>
+      <p v-if="sharedURLSplash">URL copied to the clipboard</p>
       <p v-if="done">Done</p>
     </template>
     <h2 v-if="error">{{ error.message }}</h2>
@@ -187,5 +231,8 @@ init()
 <style scoped>
 .button-bar-container {
   max-width: 12em;
+}
+input.shared-url {
+  width: 33em;
 }
 </style>

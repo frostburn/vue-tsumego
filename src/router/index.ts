@@ -27,6 +27,12 @@ const router = createRouter({
           component: () => import('../views/CollectionView.vue'),
         },
         {
+          path: 'tsumego/',
+          name: 'custom-tsumego',
+          props: true,
+          component: () => import('../views/TsumegoView.vue'),
+        },
+        {
           path: 'tsumego/:tsumego/',
           name: 'tsumego',
           props: true,

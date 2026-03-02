@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import('@/assets/tsumego.css')
 
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { rectangle } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
@@ -13,15 +14,16 @@ import {
   API_URL,
   getSolutionInfo,
   markDeadStones,
+  decodeQuery,
 } from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import PlayerIndicator from '../components/PlayerIndicator.vue'
 
-const props = defineProps<{ collection: string; tsumego: string }>()
+const props = defineProps<{ collection: string; tsumego?: string }>()
 
 const data = ref<{ title: string; subtitle: string; state?: StateJSON; botToPlay?: boolean }>({
   title: props.collection,
-  subtitle: props.tsumego,
+  subtitle: props.tsumego ?? 'Custom Study',
 })
 const error = ref<Error | null>(null)
 
@@ -43,6 +45,9 @@ const info = ref<SolutionInfo | undefined>(undefined)
 
 // Player info is displayed in the UI
 const playerInfo = ref<SolutionInfo | undefined>(undefined)
+
+let root = new State()
+const route = useRoute()
 
 const showInfo = computed(() => !done.value && (success.value || fail.value))
 
@@ -151,32 +156,61 @@ function init() {
   busy.value = true
   info.value = undefined
   playerInfo.value = undefined
-  fetch(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
-    .then((res) => res.json())
-    .then((json) => {
-      data.value = json
-      gameState.assignFromJSON(json.state)
-      if (json.canStretch) {
-        gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
-      }
-      return json
-    })
-    .then((json) => getSolutionInfo(props.collection, json))
-    .then((json) => {
-      info.value = json
-      if (data.value.botToPlay) {
-        playForcingMove(json)
-      }
-    })
-    .then(() => {
-      busy.value = false
-      whiteToPlay.value = gameState.whiteToPlay
-      koThreats.value = gameState.koThreats
-    })
-    .catch((err) => (error.value = err))
+  if (props.tsumego === undefined) {
+    fetch(new URL(`tsumego/${props.collection}/`, API_URL))
+      .then((res) => res.json())
+      .then((json) => {
+        gameState.assignFromJSON(json.root)
+        if (json.canStretch) {
+          gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+        }
+        root = new State(gameState)
+        if (route.query?.s && !Array.isArray(route.query.s)) {
+          const state = decodeQuery(root, route.query.s)
+          const stateJSON = state.toJSON()
+          data.value = { title: json.title, subtitle: 'Custom Study', state: stateJSON }
+          gameState.assignFromJSON(stateJSON)
+          return { state: stateJSON }
+        } else {
+          throw new Error('No custom position found')
+        }
+      })
+      .then((json) => getSolutionInfo(props.collection, json))
+      .then((json) => {
+        info.value = json
+        busy.value = false
+        whiteToPlay.value = gameState.whiteToPlay
+        koThreats.value = gameState.koThreats
+      })
+      .catch((err) => (error.value = err))
+  } else {
+    fetch(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
+      .then((res) => res.json())
+      .then((json) => {
+        data.value = json
+        gameState.assignFromJSON(json.state)
+        if (json.canStretch) {
+          gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+        }
+        return json
+      })
+      .then((json) => getSolutionInfo(props.collection, json))
+      .then((json) => {
+        info.value = json
+        if (data.value.botToPlay) {
+          playForcingMove(json)
+        }
+      })
+      .then(() => {
+        busy.value = false
+        whiteToPlay.value = gameState.whiteToPlay
+        koThreats.value = gameState.koThreats
+      })
+      .catch((err) => (error.value = err))
+  }
 }
 
-init()
+onMounted(init)
 </script>
 
 <template>

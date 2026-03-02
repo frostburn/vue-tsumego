@@ -1,6 +1,6 @@
 import { padStones } from './core/bitboard'
 import { State, type StateJSON } from './core/state'
-import { type SolutionInfo, type MoveInfo } from './core/solver'
+import { type SolutionInfo, type MoveInfo, encode, decode } from './core/solver'
 
 export const MIN_WIDTH = 9
 export const MIN_HEIGHT = 7
@@ -86,4 +86,12 @@ export function decode64(s: string): number {
     result = result * 64 + URL_SAFE_CHARS64.indexOf(s[i]!)
   }
   return result
+}
+
+export function decodeQuery(root: State, s: string): State {
+  return decode(root, decode64(s))
+}
+
+export function encodeQuery(root: State, state: State): string {
+  return encode64(encode(root, state))
 }
