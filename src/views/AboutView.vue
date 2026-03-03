@@ -2,7 +2,9 @@
 import { reactive } from 'vue'
 import { State } from '../core/state'
 import { rectangle, stonesOr, stonesXor, clone, single, south } from '../core/bitboard'
+import { passStyle } from '../util'
 import TheGoban from '../components/TheGoban.vue'
+import PlayerIndicator from '../components/PlayerIndicator.vue'
 
 const straightThree = reactive(new State())
 straightThree.visualArea = rectangle(9, 6)
@@ -34,6 +36,99 @@ bentFour.makeMove(single(1, 0))
 bentFour.makeMove(single(0, 0))
 bentFour.makeMove(single(0, 1))
 const bentFourPlay = bentFour.makeMove.bind(bentFour)
+
+const RECTANGLE_EIGHT_INFO = {
+  moves: [
+    {
+      x: 0,
+      y: 0,
+      lowGain: -8,
+      highGain: -8,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+    {
+      x: 1,
+      y: 0,
+      lowGain: 0,
+      highGain: 0,
+      lowIdeal: true,
+      highIdeal: true,
+      forcing: true,
+    },
+    {
+      x: 2,
+      y: 0,
+      lowGain: -8,
+      highGain: -8,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+    {
+      x: 3,
+      y: 0,
+      lowGain: -8,
+      highGain: -8,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+    {
+      x: 0,
+      y: 1,
+      lowGain: -8.5,
+      highGain: -8.5,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+    {
+      x: 1,
+      y: 1,
+      lowGain: -8,
+      highGain: -8,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+    {
+      x: 2,
+      y: 1,
+      lowGain: 0,
+      highGain: 0,
+      lowIdeal: true,
+      highIdeal: true,
+      forcing: true,
+    },
+    {
+      x: 3,
+      y: 1,
+      lowGain: -8.5,
+      highGain: -8.5,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+    {
+      x: -1,
+      y: -1,
+      lowGain: -8,
+      highGain: -8,
+      lowIdeal: false,
+      highIdeal: false,
+      forcing: false,
+    },
+  ],
+}
+const rectangleEight = reactive(new State())
+rectangleEight.visualArea = rectangle(9, 6)
+rectangleEight.logicalArea = rectangle(4, 2)
+rectangleEight.opponent = stonesXor(rectangle(5, 3), rectangle(4, 2))
+rectangleEight.player = stonesXor(rectangle(6, 4), rectangle(5, 3))
+rectangleEight.target = clone(rectangleEight.opponent)
+rectangleEight.immortal = clone(rectangleEight.player)
 </script>
 
 <template>
@@ -97,6 +192,47 @@ const bentFourPlay = bentFour.makeMove.bind(bentFour)
         least).
       </p>
 
+      <div class="goban-container">
+        <TheGoban :state="rectangleEight" :busy="true" :solutionInfo="RECTANGLE_EIGHT_INFO" />
+      </div>
+      <div class="controls">
+        <button disabled :style="passStyle(RECTANGLE_EIGHT_INFO)">pass -8.0</button>
+        <div class="indicator-container">
+          <PlayerIndicator :whiteToPlay="false" />
+        </div>
+      </div>
+      <p>
+        The relative values of moves are shown in Exploration Mode and in Tsumego Mode once the
+        problem is successfully or unsuccessfully solved.
+      </p>
+      <p>
+        The best moves lose no points and are shown as "-0.0"
+        <a class="footnote-link" href="#blue-footnote">usually</a> with a blue border.
+      </p>
+      <p>
+        In the example above Black has two options for making a seki where neither player gets
+        points in the corner which is the optimal result.
+      </p>
+      <p>
+        The "-8.0" moves let White live with eight points but at least Black keeps sente to take the
+        <i>button</i>.
+      </p>
+      <p>
+        The "-8.5" moves are so bad that White can take sente/button without endangering the group's
+        life whatsoever.
+      </p>
+      <p>
+        The color to play is indicated by the double-circle icon. The Black circle is on top
+        indicating that it's <i>Black to Play</i>.
+      </p>
+      <aside>
+        <ol class="footnotes">
+          <li id="blue-footnote">
+            The backend tracks score ranges instead of single-valued scores. A "-0.0" move may lack
+            a blue border if its upper bound is not optimal.
+          </li>
+        </ol>
+      </aside>
       <h3>Credits / Blame</h3>
       <ul>
         <li>
@@ -112,10 +248,38 @@ const bentFourPlay = bentFour.makeMove.bind(bentFour)
   </main>
 </template>
 
-<style>
+<style scoped>
 .goban-container {
   margin-top: 1em;
   padding: 0;
-  width: 10em;
+  width: 22em;
+}
+.controls {
+  display: flex;
+}
+.indicator-container {
+  display: inline-block;
+  width: 3.5em;
+  margin-left: 0.5em;
+}
+a.footnote-link {
+  counter-increment: footnotes;
+  text-decoration: none;
+  color: inherit;
+  cursor: default;
+  outline: none;
+}
+a.footnote-link:after {
+  content: '[' counter(footnotes) ']';
+  vertical-align: super;
+  font-size: 0.5em;
+}
+.footnotes {
+  padding-inline-start: 1em;
+  font-size: 0.75em;
+}
+aside {
+  margin-top: 2em;
+  border-top: 1px solid silver;
 }
 </style>
