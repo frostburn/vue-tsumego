@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import TheGoban from '../components/TheGoban.vue'
 import { type StateJSON, State } from '../core/state'
 import { rectangle } from '../core/bitboard'
@@ -19,13 +19,15 @@ const gameState = reactive(new State())
 gameState.visualArea = rectangle(5, 4)
 gameState.logicalArea = rectangle(5, 4)
 
-fetch(new URL(`tsumego/${props.collection}`, API_URL))
-  .then((res) => res.json())
-  .then((json) => {
-    gameState.assignFromJSON(json.root)
-    data.value = json
-  })
-  .catch((err) => (error.value = err))
+onMounted(() =>
+  fetch(new URL(`tsumego/${props.collection}`, API_URL))
+    .then((res) => res.json())
+    .then((json) => {
+      gameState.assignFromJSON(json.root)
+      data.value = json
+    })
+    .catch((err) => (error.value = err)),
+)
 </script>
 
 <template>

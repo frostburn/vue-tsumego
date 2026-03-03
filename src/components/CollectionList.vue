@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { API_URL } from '../util'
 
 type CollectionsResponse = {
@@ -9,10 +9,12 @@ type CollectionsResponse = {
 const data = ref<CollectionsResponse | null>(null)
 const error = ref<Error | null>(null)
 
-fetch(new URL('tsumego/', API_URL))
-  .then((res) => res.json())
-  .then((json) => (data.value = json))
-  .catch((err) => (error.value = err))
+onMounted(() =>
+  fetch(new URL('tsumego/', API_URL))
+    .then((res) => res.json())
+    .then((json) => (data.value = json))
+    .catch((err) => (error.value = err)),
+)
 </script>
 
 <template>
