@@ -174,4 +174,26 @@ describe('State encoder', () => {
 
     expect(state.equals(decoded)).toBe(true)
   })
+
+  it('encodes ko threats', () => {
+    const root = rectangleSix()
+    root.koThreats = 2
+
+    const state = new State(root)
+    state.koThreats = -1
+
+    let encoded = encode(root, state)
+    expect(encoded).toBe(2466944)
+
+    let decoded = decode(root, encoded)
+    expect(decoded.koThreats).toBe(-1)
+
+    state.makeMove(1, 1)
+
+    encoded = encode(root, state)
+    expect(encoded).toBe(3175649)
+
+    decoded = decode(root, encoded)
+    expect(decoded.koThreats).toBe(1)
+  })
 })

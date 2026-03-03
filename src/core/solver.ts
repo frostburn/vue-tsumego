@@ -82,7 +82,8 @@ export function encode(root: State, state: State, moves?: Stones[]): number {
   result = 2 * result + state.passes
   result = 3 * result + state.button + 1
 
-  result = (2 * Math.abs(root.koThreats) + 1) * result + state.koThreats
+  const k = Math.abs(root.koThreats)
+  result = (2 * k + 1) * result + state.koThreats + k
 
   result =
     (stonesCount(stonesAnd(root.external, root.opponent)) + 1) * result +
@@ -166,10 +167,11 @@ export function decode(root: State, key: number, moves?: Stones[]): State {
   merge(result.immortal, stonesXor(root.external, result.external))
   subtract(result.logicalArea, result.immortal)
 
-  m = 2 * Math.abs(root.koThreats) + 1
+  const k = Math.abs(root.koThreats)
+  m = 2 * k + 1
   n = key % m
   key = (key - n) / m
-  result.koThreats = n - Math.abs(root.koThreats)
+  result.koThreats = n - k
 
   m = 3
   n = key % m
