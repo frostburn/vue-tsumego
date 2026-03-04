@@ -34,6 +34,8 @@ const gameState = reactive(new State())
 gameState.visualArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 gameState.logicalArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 
+const undos = reactive<StateJSON[]>([])
+
 const external = ref(emptyStones())
 
 const maxThreats = ref(0)
@@ -51,6 +53,8 @@ const sharedURLSplash = ref(false)
 let root = new State()
 const route = useRoute()
 const router = useRouter()
+
+const stateJSON = computed(() => gameState.toJSON())
 
 const passGain = computed(() => {
   if (info.value === undefined) {
@@ -78,7 +82,7 @@ async function swapPlayers() {
 }
 
 async function getInfo() {
-  info.value = await getSolutionInfo(props.collection, gameState)
+  info.value = await getSolutionInfo(props.collection, { state: stateJSON.value })
 }
 
 async function play(x: number, y: number) {
@@ -86,12 +90,14 @@ async function play(x: number, y: number) {
     return
   }
   busy.value = true
+  const undo = stateJSON.value
   if (playMode.value === 'play' || x < 0) {
     const r = gameState.makeMove(x, y)
     if (r == MoveResult.Illegal) {
       busy.value = false
       return
     }
+    undos.push(undo)
     if (r == MoveResult.SecondPass) {
       await markDeadStones(props.collection, gameState)
     }
@@ -102,7 +108,7 @@ async function play(x: number, y: number) {
     }
   } else {
     gameState.flipStones(single(x, y), external.value, playMode.value === 'white')
-
+    undos.push(undo)
     // Trigger `reactive()`
     gameState.player = clone(gameState.player)
   }
@@ -126,10 +132,20 @@ function sharePosition(name: string) {
   }
 }
 
+async function doUndo() {
+  const undo = undos.pop()!
+  gameState.assignFromJSON(undo)
+  done.value = false
+  busy.value = true
+  await getInfo()
+  busy.value = false
+}
+
 function init() {
   busy.value = true
   done.value = false
   info.value = undefined
+  undos.length = 0
   fetch(new URL(`tsumego/${props.collection}/`, API_URL))
     .then((res) => res.json())
     .then((json) => {
@@ -182,8 +198,11 @@ onMounted(init)
         </button>
         <button @click="swapPlayers" :disabled="busy || done">swap players</button>
       </div>
-      <div class="button-bar-container">
-        <ButtonBar :whiteToPlay="gameState.whiteToPlay" v-model="playMode" />
+      <div class="controls">
+        <div class="button-bar-container">
+          <ButtonBar :whiteToPlay="gameState.whiteToPlay" v-model="playMode" />
+        </div>
+        <button class="undo" @click="doUndo" :disabled="!undos.length" />
       </div>
       <div>
         <label for="ko-threats">Ko-threats: </label>
@@ -230,6 +249,7 @@ onMounted(init)
 
 <style scoped>
 .button-bar-container {
+  display: inline-block;
   max-width: 12em;
 }
 input.shared-url {

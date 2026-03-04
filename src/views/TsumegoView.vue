@@ -41,6 +41,8 @@ const gameState = reactive(new State())
 gameState.visualArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 gameState.logicalArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 
+const undos = reactive<StateJSON[]>([])
+
 // Info is used for grading player moves and making bot moves
 const info = ref<SolutionInfo | undefined>(undefined)
 
@@ -54,6 +56,8 @@ let root = new State()
 const route = useRoute()
 
 const tsumegoStore = useTsumegoStore()
+
+const stateJSON = computed(() => gameState.toJSON())
 
 const showInfo = computed(() => !done.value && (success.value || fail.value))
 
@@ -80,7 +84,7 @@ const myPassStyle = computed(() => {
 })
 
 async function getInfo() {
-  const json = await getSolutionInfo(props.collection, gameState)
+  const json = await getSolutionInfo(props.collection, { state: stateJSON.value })
   info.value = json
   return json
 }
@@ -124,11 +128,13 @@ async function play(x: number, y: number) {
       fail.value = true
     }
   }
+  const undo = stateJSON.value
   const r = gameState.makeMove(x, y)
   if (r == MoveResult.Illegal) {
     busy.value = false
     return
   }
+  undos.push(undo)
   if (r == MoveResult.SecondPass) {
     await markDeadStones(props.collection, gameState)
   }
@@ -155,6 +161,17 @@ async function play(x: number, y: number) {
   koThreats.value = gameState.koThreats
 }
 
+async function doUndo() {
+  const undo = undos.pop()!
+  gameState.assignFromJSON(undo)
+  fail.value = false
+  success.value = false
+  done.value = false
+  busy.value = true
+  await getInfo()
+  busy.value = false
+}
+
 function init() {
   done.value = false
   success.value = false
@@ -162,6 +179,7 @@ function init() {
   busy.value = true
   info.value = undefined
   playerInfo.value = undefined
+  undos.length = 0
   if (props.tsumego === undefined) {
     fetch(new URL(`tsumego/${props.collection}/`, API_URL))
       .then((res) => res.json())
@@ -172,11 +190,11 @@ function init() {
         }
         root = new State(gameState)
         if (route.query?.s && !Array.isArray(route.query.s)) {
-          const state = decodeQuery(root, route.query.s)
-          const stateJSON = state.toJSON()
-          data.value = { title: json.title, subtitle: 'Custom Study', state: stateJSON }
-          gameState.assignFromJSON(stateJSON)
-          return { state: stateJSON }
+          const queryState = decodeQuery(root, route.query.s)
+          const state = queryState.toJSON()
+          data.value = { title: json.title, subtitle: 'Custom Study', state }
+          gameState.assignFromJSON(state)
+          return { state }
         } else {
           throw new Error('No custom position found')
         }
@@ -259,7 +277,7 @@ watch(props, updateSisterLinks)
         <span class="indicator-container">
           <PlayerIndicator :whiteToPlay="whiteToPlay" />
         </span>
-
+        <button class="undo" @click="doUndo" :disabled="!undos.length" />
         <button v-if="fail || success || done" :disabled="busy" @click="init">reset</button>
       </div>
       <p>Ko-threats: {{ koThreats }}</p>
@@ -277,9 +295,6 @@ watch(props, updateSisterLinks)
   font-weight: bold;
   magin-left: 1em;
   margin-right: 1em;
-}
-.controls {
-  display: flex;
 }
 .indicator-container {
   display: inline-block;

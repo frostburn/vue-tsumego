@@ -1,10 +1,36 @@
 .goban-container {
   max-width: 46em;
 }
+.controls {
+  display: flex;
+}
 button {
   margin-top: 0.4em;
   margin-bottom: 0.5em;
   margin-right: 0.5em;
   min-width: 5em;
   height: 3em;
+}
+button.undo {
+  color: var(--color-text);
+  background: var(--color-background-mute);
+  border: none;
+  border-radius: 0.1em;
+  margin-top: 0.06em;
+  margin-bottom: 0.01em;
+  margin-left: 0.15em;
+  margin-right: 0.15em;
+  font-size: 3.4em;
+  padding: 0;
+  padding-inline: 0;
+  height: 1.15em;
+  min-width: 1.15em;
+}
+button.undo:disabled {
+  color: var(--color-border);
+  background: var(--color-background-soft);
+}
+button.undo::after {
+  content: '\0238C';
+  font-weight: bold;
 }
