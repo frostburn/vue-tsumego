@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import('@/assets/tsumego.css')
 
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { rectangle } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
@@ -16,6 +16,7 @@ import {
   markDeadStones,
   decodeQuery,
 } from '../util'
+import { useTsumegoStore } from '../stores/tsumego'
 import TheGoban from '../components/TheGoban.vue'
 import PlayerIndicator from '../components/PlayerIndicator.vue'
 
@@ -46,8 +47,13 @@ const info = ref<SolutionInfo | undefined>(undefined)
 // Player info is displayed in the UI
 const playerInfo = ref<SolutionInfo | undefined>(undefined)
 
+const previous = ref<{ collection: string; tsumego: string } | null>(null)
+const next = ref<{ collection: string; tsumego: string } | null>(null)
+
 let root = new State()
 const route = useRoute()
+
+const tsumegoStore = useTsumegoStore()
 
 const showInfo = computed(() => !done.value && (success.value || fail.value))
 
@@ -210,12 +216,32 @@ function init() {
   }
 }
 
+async function updateSisterLinks() {
+  if (props.tsumego !== undefined) {
+    previous.value = await tsumegoStore.previous(props.collection, props.tsumego)
+    next.value = await tsumegoStore.next(props.collection, props.tsumego)
+  } else {
+    previous.value = null
+    next.value = null
+  }
+}
+
 onMounted(init)
+onMounted(updateSisterLinks)
+
+watch(props, init)
+watch(props, updateSisterLinks)
 </script>
 
 <template>
   <main>
     <h1>{{ data.title }}: {{ data.subtitle }}</h1>
+    <RouterLink class="sister-tsumego" v-if="previous" :to="{ name: 'tsumego', params: previous }"
+      >&#10094;</RouterLink
+    >
+    <RouterLink class="sister-tsumego" v-if="next" :to="{ name: 'tsumego', params: next }"
+      >&#10095;</RouterLink
+    >
     <p v-if="!data.state">Loading...</p>
     <template v-else>
       <div class="goban-container">
@@ -246,6 +272,12 @@ onMounted(init)
 </template>
 
 <style scoped>
+.sister-tsumego {
+  font-size: 2.5em;
+  font-weight: bold;
+  magin-left: 1em;
+  margin-right: 1em;
+}
 .controls {
   display: flex;
 }
