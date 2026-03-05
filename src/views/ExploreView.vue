@@ -150,9 +150,7 @@ function init() {
     .then((res) => res.json())
     .then((json) => {
       maxThreats.value = Math.abs(json.root.koThreats)
-      json.state = json.root
-      data.value = json
-      gameState.assignFromJSON(json.state)
+      gameState.assignFromJSON(json.root)
       if (json.canStretch) {
         gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
       }
@@ -162,8 +160,13 @@ function init() {
       root = new State(gameState)
       if (route.query?.s && !Array.isArray(route.query.s)) {
         const state = decodeQuery(root, route.query.s)
-        gameState.assignFromJSON(state.toJSON())
+        json.state = state.toJSON()
+        gameState.assignFromJSON(json.state)
+      } else {
+        // The root is unstretched but it shouldn't affect getSolutionInfo()
+        json.state = json.root
       }
+      data.value = json
       return json
     })
     .then((json) => getSolutionInfo(props.collection, json))
