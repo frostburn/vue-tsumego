@@ -15,6 +15,12 @@ a,
   padding: 3px;
 }
 
+a.disabled {
+  color: hsla(160, 50%, 17%, 1);
+  pointer-events: none;
+  cursor: pointer;
+}
+
 @media (hover: hover) {
   a:hover {
     background-color: hsla(160, 100%, 37%, 0.2);

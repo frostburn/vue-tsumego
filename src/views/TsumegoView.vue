@@ -254,12 +254,16 @@ watch(props, updateSisterLinks)
 <template>
   <main>
     <h1>{{ data.title }}: {{ data.subtitle }}</h1>
-    <RouterLink class="sister-tsumego" v-if="previous" :to="{ name: 'tsumego', params: previous }"
+
+    <RouterLink v-if="previous" class="sister-tsumego" :to="{ name: 'tsumego', params: previous }"
       >&#10094;</RouterLink
     >
-    <RouterLink class="sister-tsumego" v-if="next" :to="{ name: 'tsumego', params: next }"
+    <a v-else href="#" class="sister-tsumego disabled start">|&#10094;</a>
+    <RouterLink v-if="next" class="sister-tsumego" :to="{ name: 'tsumego', params: next }"
       >&#10095;</RouterLink
     >
+    <a v-else href="#" class="sister-tsumego disabled">&#10095;|</a>
+
     <p v-if="!data.state">Loading...</p>
     <template v-else>
       <div class="goban-container">
@@ -293,8 +297,11 @@ watch(props, updateSisterLinks)
 .sister-tsumego {
   font-size: 2.5em;
   font-weight: bold;
-  magin-left: 1em;
+  margin-left: 1em;
   margin-right: 1em;
+}
+.sister-tsumego.disabled.start {
+  margin-left: 0.75em;
 }
 .indicator-container {
   display: inline-block;
