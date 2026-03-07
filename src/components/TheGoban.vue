@@ -352,7 +352,7 @@ line {
 }
 text {
   text-anchor: middle;
-  dominant-baseline: middle;
+  dominant-baseline: central;
 }
 circle.dead {
   opacity: 60%;
