@@ -76,6 +76,19 @@ async function onStateChange() {
   busy.value = false
 }
 
+async function incThreats(delta: number) {
+  gameState.koThreats = Math.max(
+    -maxThreats.value,
+    Math.min(maxThreats.value, gameState.koThreats + delta),
+  )
+  await onStateChange()
+}
+
+async function incButton(delta: number) {
+  gameState.button = Math.max(-1, Math.min(1, gameState.button + delta))
+  await onStateChange()
+}
+
 async function swapPlayers() {
   gameState.swapPlayers()
   await onStateChange()
@@ -219,6 +232,18 @@ onMounted(init)
           type="number"
           step="1"
         />
+        <a
+          href="#"
+          :class="{ disabled: gameState.koThreats === -maxThreats }"
+          @click="incThreats(-1)"
+          >-</a
+        >
+        <a
+          href="#"
+          :class="{ disabled: gameState.koThreats === +maxThreats }"
+          @click="incThreats(+1)"
+          >+</a
+        >
         <label for="button"> Button: </label>
         <input
           id="button"
@@ -230,6 +255,8 @@ onMounted(init)
           type="number"
           step="1"
         />
+        <a href="#" :class="{ disabled: gameState.button === -1 }" @click="incButton(-1)">-</a>
+        <a href="#" :class="{ disabled: gameState.button === +1 }" @click="incButton(+1)">+</a>
       </div>
       <div>
         <button @click="init" :disabled="busy">reset</button>
