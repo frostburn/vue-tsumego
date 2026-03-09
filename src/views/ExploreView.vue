@@ -217,6 +217,7 @@ onMounted(init)
           :max="maxThreats"
           @change="onStateChange"
           type="number"
+          step="1"
         />
         <label for="button"> Button: </label>
         <input
@@ -227,6 +228,7 @@ onMounted(init)
           :max="1"
           @change="onStateChange"
           type="number"
+          step="1"
         />
       </div>
       <div>
