@@ -282,7 +282,7 @@ watch(props, updateSisterLinks)
           <PlayerIndicator :whiteToPlay="whiteToPlay" />
         </span>
         <button class="undo" @click="doUndo" :disabled="!undos.length" />
-        <button v-if="fail || success || done" :disabled="busy" @click="init">reset</button>
+        <button :disabled="busy" @click="init">reset</button>
       </div>
       <p>Ko-threats: {{ koThreats }}</p>
       <p v-if="fail">Failed</p>
