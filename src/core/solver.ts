@@ -6,7 +6,6 @@ import {
   stonesAnd,
   equals,
   overlaps,
-  witherBy,
   subtract,
   stonesNot,
   merge,
@@ -52,10 +51,8 @@ export function keyspaceSize(root: State): number {
   // Location or absence of ko
   result *= numMoves + 1
 
-  // External liberties filled by the player
-  result *= stonesCount(stonesAnd(root.external, root.player)) + 1
-  // External liberties filled by the opponent
-  result *= stonesCount(stonesAnd(root.external, root.opponent)) + 1
+  // External liberties in binary
+  result *= 2 ** stonesCount(root.external)
 
   // Ko threats and their inverses
   result *= 2 * Math.abs(root.koThreats) + 1
@@ -85,12 +82,14 @@ export function encode(root: State, state: State, moves?: Stones[]): number {
   const k = Math.abs(root.koThreats)
   result = (2 * k + 1) * result + state.koThreats + k
 
-  result =
-    (stonesCount(stonesAnd(root.external, root.opponent)) + 1) * result +
-    stonesCount(stonesAnd(state.external, root.opponent))
-  result =
-    (stonesCount(stonesAnd(root.external, root.player)) + 1) * result +
-    stonesCount(stonesAnd(state.external, root.player))
+  for (let i = 0; i < moves.length - 1; ++i) {
+    if (overlaps(moves[i]!, root.external)) {
+      result *= 2
+      if (overlaps(moves[i]!, state.external)) {
+        result += 1
+      }
+    }
+  }
 
   result *= moves.length
   for (let i = 0; i < moves.length; ++i) {
@@ -150,20 +149,16 @@ export function decode(root: State, key: number, moves?: Stones[]): State {
   key = (key - n) / m
   result.ko = clone(moves[n]!)
 
-  const playerExternal = stonesAnd(root.external, root.player)
-  m = stonesCount(playerExternal) + 1
-  n = key % m
-  key = (key - n) / m
-  witherBy(playerExternal, m - 1 - n)
+  for (let i = moves.length - 2; i >= 0; --i) {
+    if (overlaps(moves[i]!, root.external)) {
+      n = key % 2
+      if (n) {
+        merge(result.external, moves[i]!)
+      }
+      key = (key - n) / 2
+    }
+  }
 
-  const opponentExternal = stonesAnd(root.external, root.opponent)
-  m = stonesCount(opponentExternal) + 1
-  n = key % m
-  key = (key - n) / m
-  witherBy(opponentExternal, m - 1 - n)
-
-  merge(result.external, playerExternal)
-  merge(result.external, opponentExternal)
   merge(result.immortal, stonesXor(root.external, result.external))
   subtract(result.logicalArea, result.immortal)
 

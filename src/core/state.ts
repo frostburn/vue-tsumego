@@ -136,7 +136,7 @@ export class State {
   // Stones that cannot be captured even if they run out of liberties.
   immortal: Stones
 
-  // External liberties. Should be adjacent to the target. Always counts as empty space.
+  // External liberties. Usually adjacent to the target. Always counts as empty space.
   // Player/opponent flags indicate who can fill in the liberties.
   external: Stones
 

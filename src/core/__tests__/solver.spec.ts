@@ -155,7 +155,7 @@ describe('State encoder', () => {
     debug(state)
 
     let encoded = encode(root, state)
-    expect(encoded).toBe(695591)
+    expect(encoded).toBe(931787)
 
     let decoded = decode(root, encoded)
     debug(decoded)
@@ -167,7 +167,7 @@ describe('State encoder', () => {
     debug(state)
 
     encoded = encode(root, state)
-    expect(encoded).toBe(578951)
+    expect(encoded).toBe(815147)
 
     decoded = decode(root, encoded)
     debug(decoded)
@@ -183,7 +183,7 @@ describe('State encoder', () => {
     state.koThreats = -1
 
     let encoded = encode(root, state)
-    expect(encoded).toBe(2466944)
+    expect(encoded).toBe(3293630)
 
     let decoded = decode(root, encoded)
     expect(decoded.koThreats).toBe(-1)
@@ -191,7 +191,7 @@ describe('State encoder', () => {
     state.makeMove(1, 1)
 
     encoded = encode(root, state)
-    expect(encoded).toBe(3175649)
+    expect(encoded).toBe(4238531)
 
     decoded = decode(root, encoded)
     expect(decoded.koThreats).toBe(1)
