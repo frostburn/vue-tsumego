@@ -12,6 +12,7 @@ import {
   formatGain,
   passStyle,
   API_URL,
+  fetchJson,
   getSolutionInfo,
   markDeadStones,
   encodeQuery,
@@ -159,8 +160,12 @@ function init() {
   done.value = false
   info.value = undefined
   undos.length = 0
-  fetch(new URL(`tsumego/${props.collection}/`, API_URL))
-    .then((res) => res.json())
+  fetchJson<{
+    title: string
+    root: StateJSON
+    state?: StateJSON
+    canStretch?: boolean
+  }>(new URL(`tsumego/${props.collection}/`, API_URL))
     .then((json) => {
       maxThreats.value = Math.abs(json.root.koThreats)
       gameState.assignFromJSON(json.root)
@@ -232,18 +237,20 @@ onMounted(init)
           type="number"
           step="1"
         />
-        <a
-          href="#"
-          :class="{ disabled: gameState.koThreats === -maxThreats }"
+        <button
+          type="button"
+          :disabled="busy || done || gameState.koThreats === -maxThreats"
           @click="incThreats(-1)"
-          >-</a
         >
-        <a
-          href="#"
-          :class="{ disabled: gameState.koThreats === +maxThreats }"
+          -
+        </button>
+        <button
+          type="button"
+          :disabled="busy || done || gameState.koThreats === maxThreats"
           @click="incThreats(+1)"
-          >+</a
         >
+          +
+        </button>
         <label for="button"> Button: </label>
         <input
           id="button"
@@ -255,8 +262,20 @@ onMounted(init)
           type="number"
           step="1"
         />
-        <a href="#" :class="{ disabled: gameState.button === -1 }" @click="incButton(-1)">-</a>
-        <a href="#" :class="{ disabled: gameState.button === +1 }" @click="incButton(+1)">+</a>
+        <button
+          type="button"
+          :disabled="busy || done || gameState.button === -1"
+          @click="incButton(-1)"
+        >
+          -
+        </button>
+        <button
+          type="button"
+          :disabled="busy || done || gameState.button === 1"
+          @click="incButton(+1)"
+        >
+          +
+        </button>
       </div>
       <div>
         <button @click="init" :disabled="busy">reset</button>

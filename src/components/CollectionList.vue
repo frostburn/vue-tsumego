@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { API_URL } from '../util'
+import { API_URL, fetchJson } from '../util'
 
 type CollectionsResponse = {
   collections: { slug: string; title: string }[]
@@ -10,8 +10,7 @@ const data = ref<CollectionsResponse | null>(null)
 const error = ref<Error | null>(null)
 
 onMounted(() =>
-  fetch(new URL('tsumego/', API_URL))
-    .then((res) => res.json())
+  fetchJson<CollectionsResponse>(new URL('tsumego/', API_URL))
     .then((json) => (data.value = json))
     .catch((err) => (error.value = err)),
 )
