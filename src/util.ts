@@ -9,6 +9,24 @@ type SolutionResponse = SolutionInfo & {
   deadStones?: number[]
 }
 
+export type CollectionRootResponse = {
+  title: string
+  root: StateJSON
+  canStretch?: boolean
+}
+
+export type ExploreResponse = CollectionRootResponse & {
+  state?: StateJSON
+}
+
+export type TsumegoResponse = {
+  title: string
+  subtitle: string
+  state: StateJSON
+  botToPlay?: boolean
+  canStretch?: boolean
+}
+
 export function formatGain(info: MoveInfo) {
   const gain = info.lowGain
   if (gain < -100) {

@@ -16,6 +16,8 @@ import {
   getSolutionInfo,
   markDeadStones,
   decodeQuery,
+  type CollectionRootResponse,
+  type TsumegoResponse,
 } from '../util'
 import { useTsumegoStore } from '../stores/tsumego'
 import TheGoban from '../components/TheGoban.vue'
@@ -182,9 +184,7 @@ function init() {
   playerInfo.value = undefined
   undos.length = 0
   if (props.tsumego === undefined) {
-    fetchJson<{ title: string; root: StateJSON; canStretch?: boolean }>(
-      new URL(`tsumego/${props.collection}/`, API_URL),
-    )
+    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
       .then((json) => {
         gameState.assignFromJSON(json.root)
         if (json.canStretch) {
@@ -210,13 +210,7 @@ function init() {
       })
       .catch((err) => (error.value = err))
   } else {
-    fetchJson<{
-      title: string
-      subtitle: string
-      state: StateJSON
-      botToPlay?: boolean
-      canStretch?: boolean
-    }>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
+    fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
       .then((json) => {
         data.value = json
         gameState.assignFromJSON(json.state)
@@ -306,6 +300,10 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
   font-weight: bold;
   margin-left: 1em;
   margin-right: 1em;
+}
+.sister-tsumego.disabled {
+  color: hsla(160, 50%, 17%, 1);
+  cursor: default;
 }
 .sister-tsumego.disabled.start {
   margin-left: 0.75em;

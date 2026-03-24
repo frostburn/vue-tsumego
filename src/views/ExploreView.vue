@@ -17,6 +17,7 @@ import {
   markDeadStones,
   encodeQuery,
   decodeQuery,
+  type ExploreResponse,
 } from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import ButtonBar from '../components/ButtonBar.vue'
@@ -160,12 +161,7 @@ function init() {
   done.value = false
   info.value = undefined
   undos.length = 0
-  fetchJson<{
-    title: string
-    root: StateJSON
-    state?: StateJSON
-    canStretch?: boolean
-  }>(new URL(`tsumego/${props.collection}/`, API_URL))
+  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
     .then((json) => {
       maxThreats.value = Math.abs(json.root.koThreats)
       gameState.assignFromJSON(json.root)
@@ -239,6 +235,7 @@ onMounted(init)
         />
         <button
           type="button"
+          class="inline-control"
           :disabled="busy || done || gameState.koThreats === -maxThreats"
           @click="incThreats(-1)"
         >
@@ -246,6 +243,7 @@ onMounted(init)
         </button>
         <button
           type="button"
+          class="inline-control"
           :disabled="busy || done || gameState.koThreats === maxThreats"
           @click="incThreats(+1)"
         >
@@ -264,6 +262,7 @@ onMounted(init)
         />
         <button
           type="button"
+          class="inline-control"
           :disabled="busy || done || gameState.button === -1"
           @click="incButton(-1)"
         >
@@ -271,6 +270,7 @@ onMounted(init)
         </button>
         <button
           type="button"
+          class="inline-control"
           :disabled="busy || done || gameState.button === 1"
           @click="incButton(+1)"
         >
@@ -305,5 +305,25 @@ onMounted(init)
 }
 input.shared-url {
   width: 33em;
+}
+button.inline-control {
+  min-width: 0;
+  height: auto;
+  margin: 0 0.3em;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: hsla(160, 100%, 37%, 1);
+  font: inherit;
+  cursor: pointer;
+}
+button.inline-control:disabled {
+  color: hsla(160, 50%, 17%, 1);
+  cursor: default;
+}
+@media (hover: hover) {
+  button.inline-control:not(:disabled):hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
 }
 </style>
