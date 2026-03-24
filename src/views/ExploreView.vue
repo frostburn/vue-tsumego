@@ -12,10 +12,12 @@ import {
   formatGain,
   passStyle,
   API_URL,
+  fetchJson,
   getSolutionInfo,
   markDeadStones,
   encodeQuery,
   decodeQuery,
+  type ExploreResponse,
 } from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import ButtonBar from '../components/ButtonBar.vue'
@@ -159,8 +161,7 @@ function init() {
   done.value = false
   info.value = undefined
   undos.length = 0
-  fetch(new URL(`tsumego/${props.collection}/`, API_URL))
-    .then((res) => res.json())
+  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
     .then((json) => {
       maxThreats.value = Math.abs(json.root.koThreats)
       gameState.assignFromJSON(json.root)
@@ -182,7 +183,7 @@ function init() {
       data.value = json
       return json
     })
-    .then((json) => getSolutionInfo(props.collection, json))
+    .then((json) => getSolutionInfo(props.collection, { state: json.state! }))
     .then((json) => {
       info.value = json
       busy.value = false
@@ -232,18 +233,22 @@ onMounted(init)
           type="number"
           step="1"
         />
-        <a
-          href="#"
-          :class="{ disabled: gameState.koThreats === -maxThreats }"
+        <button
+          type="button"
+          class="inline-control"
+          :disabled="busy || done || gameState.koThreats === -maxThreats"
           @click="incThreats(-1)"
-          >-</a
         >
-        <a
-          href="#"
-          :class="{ disabled: gameState.koThreats === +maxThreats }"
+          -
+        </button>
+        <button
+          type="button"
+          class="inline-control"
+          :disabled="busy || done || gameState.koThreats === maxThreats"
           @click="incThreats(+1)"
-          >+</a
         >
+          +
+        </button>
         <label for="button"> Button: </label>
         <input
           id="button"
@@ -255,8 +260,22 @@ onMounted(init)
           type="number"
           step="1"
         />
-        <a href="#" :class="{ disabled: gameState.button === -1 }" @click="incButton(-1)">-</a>
-        <a href="#" :class="{ disabled: gameState.button === +1 }" @click="incButton(+1)">+</a>
+        <button
+          type="button"
+          class="inline-control"
+          :disabled="busy || done || gameState.button === -1"
+          @click="incButton(-1)"
+        >
+          -
+        </button>
+        <button
+          type="button"
+          class="inline-control"
+          :disabled="busy || done || gameState.button === 1"
+          @click="incButton(+1)"
+        >
+          +
+        </button>
       </div>
       <div>
         <button @click="init" :disabled="busy">reset</button>
@@ -286,5 +305,25 @@ onMounted(init)
 }
 input.shared-url {
   width: 33em;
+}
+button.inline-control {
+  min-width: 0;
+  height: auto;
+  margin: 0 0.3em;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-link);
+  font: inherit;
+  cursor: pointer;
+}
+button.inline-control:disabled {
+  color: var(--color-link-disabled);
+  cursor: default;
+}
+@media (hover: hover) {
+  button.inline-control:not(:disabled):hover {
+    background-color: var(--color-link-hover-bg);
+  }
 }
 </style>

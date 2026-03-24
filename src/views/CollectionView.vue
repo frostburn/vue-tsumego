@@ -3,7 +3,7 @@ import { ref, reactive, onMounted } from 'vue'
 import TheGoban from '../components/TheGoban.vue'
 import { type StateJSON, State } from '../core/state'
 import { rectangle } from '../core/bitboard'
-import { API_URL } from '../util'
+import { API_URL, fetchJson } from '../util'
 
 type CollectionResponse = {
   title: string
@@ -20,8 +20,7 @@ gameState.visualArea = rectangle(5, 4)
 gameState.logicalArea = rectangle(5, 4)
 
 onMounted(() =>
-  fetch(new URL(`tsumego/${props.collection}`, API_URL))
-    .then((res) => res.json())
+  fetchJson<CollectionResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
     .then((json) => {
       gameState.assignFromJSON(json.root)
       data.value = json

@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { encode64, decode64 } from '../util'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { decode64, encode64, fetchJson } from '../util'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 // prettier-ignore
 const ENCODED_100 = [
@@ -43,5 +47,31 @@ describe('URL-safe number decoder', () => {
       const r = Math.floor(Math.random() * 2 ** 32)
       expect(decode64(encode64(r))).toBe(r)
     }
+  })
+})
+
+describe('fetchJson', () => {
+  it('returns parsed JSON for successful responses', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await expect(fetchJson<{ ok: boolean }>('https://example.com')).resolves.toEqual({ ok: true })
+  })
+
+  it('throws a helpful error for failed responses', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('nope', {
+        status: 503,
+        statusText: 'Service Unavailable',
+      }),
+    )
+
+    await expect(fetchJson('https://example.com')).rejects.toThrow(
+      'Request failed: 503 Service Unavailable',
+    )
   })
 })

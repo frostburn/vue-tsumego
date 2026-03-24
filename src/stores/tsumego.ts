@@ -1,6 +1,6 @@
 import { ref, reactive } from 'vue'
 import { defineStore } from 'pinia'
-import { API_URL } from '../util'
+import { API_URL, fetchJson } from '../util'
 
 type Response = {
   collections: { slug: string; tsumegos: string[] }[]
@@ -13,8 +13,7 @@ export const useTsumegoStore = defineStore('tsumego', () => {
 
   async function init() {
     if (!collections.value.length) {
-      const response = await fetch(new URL('tsumego/?deep=1', API_URL))
-      const json: Response = await response.json()
+      const json = await fetchJson<Response>(new URL('tsumego/?deep=1', API_URL))
       collections.value = json.collections.map((c) => c.slug)
       for (const c of json.collections) {
         tsumegosByCollection[c.slug] = c.tsumegos

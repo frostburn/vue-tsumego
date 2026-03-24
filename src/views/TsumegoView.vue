@@ -12,9 +12,12 @@ import {
   formatGain,
   passStyle,
   API_URL,
+  fetchJson,
   getSolutionInfo,
   markDeadStones,
   decodeQuery,
+  type CollectionRootResponse,
+  type TsumegoResponse,
 } from '../util'
 import { useTsumegoStore } from '../stores/tsumego'
 import TheGoban from '../components/TheGoban.vue'
@@ -181,8 +184,7 @@ function init() {
   playerInfo.value = undefined
   undos.length = 0
   if (props.tsumego === undefined) {
-    fetch(new URL(`tsumego/${props.collection}/`, API_URL))
-      .then((res) => res.json())
+    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
       .then((json) => {
         gameState.assignFromJSON(json.root)
         if (json.canStretch) {
@@ -208,8 +210,7 @@ function init() {
       })
       .catch((err) => (error.value = err))
   } else {
-    fetch(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
-      .then((res) => res.json())
+    fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
       .then((json) => {
         data.value = json
         gameState.assignFromJSON(json.state)
@@ -247,8 +248,8 @@ async function updateSisterLinks() {
 onMounted(init)
 onMounted(updateSisterLinks)
 
-watch(props, init)
-watch(props, updateSisterLinks)
+watch(() => [props.collection, props.tsumego], init)
+watch(() => [props.collection, props.tsumego], updateSisterLinks)
 </script>
 
 <template>
@@ -258,11 +259,11 @@ watch(props, updateSisterLinks)
     <RouterLink v-if="previous" class="sister-tsumego" :to="{ name: 'tsumego', params: previous }"
       >&#10094;</RouterLink
     >
-    <a v-else href="#" class="sister-tsumego disabled start">|&#10094;</a>
+    <span v-else class="sister-tsumego disabled start">|&#10094;</span>
     <RouterLink v-if="next" class="sister-tsumego" :to="{ name: 'tsumego', params: next }"
       >&#10095;</RouterLink
     >
-    <a v-else href="#" class="sister-tsumego disabled">&#10095;|</a>
+    <span v-else class="sister-tsumego disabled">&#10095;|</span>
 
     <p v-if="!data.state">Loading...</p>
     <template v-else>
@@ -299,6 +300,10 @@ watch(props, updateSisterLinks)
   font-weight: bold;
   margin-left: 1em;
   margin-right: 1em;
+}
+.sister-tsumego.disabled {
+  color: var(--color-link-disabled);
+  cursor: default;
 }
 .sister-tsumego.disabled.start {
   margin-left: 0.75em;
