@@ -122,8 +122,9 @@ export function clear(stones: Stones) {
 }
 
 export function equals(a: Stones, b: Stones) {
-  for (let i = 0; i < NUM_SLICES; ++i) {
-    if (a[i] !== b[i]) {
+  const length = Math.max(a.length, b.length)
+  for (let i = 0; i < length; ++i) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) {
       return false
     }
   }
@@ -131,8 +132,9 @@ export function equals(a: Stones, b: Stones) {
 }
 
 export function overlaps(a: Stones, b: Stones) {
-  for (let i = 0; i < NUM_SLICES; ++i) {
-    if (a[i]! & b[i]!) {
+  const length = Math.max(a.length, b.length)
+  for (let i = 0; i < length; ++i) {
+    if ((a[i] ?? 0) & (b[i] ?? 0)) {
       return true
     }
   }
@@ -208,26 +210,28 @@ export function stonesCount(stones: Stones) {
  * @param target Bitboard pattern to constrain the expansion.
  */
 export function bleed(source: Stones, target: Stones) {
-  if (isEmpty(source)) {
+  const length = source.length
+  if (!length || isEmpty(source)) {
     return
   }
 
   const temp = new Uint32Array(source)
   flooding: while (true) {
-    source[0]! |= (source[1]! | (source[0]! >>> 1) | (source[0]! << 1)) & target[0]!
+    source[0]! |= ((source[1] ?? 0) | (source[0]! >>> 1) | (source[0]! << 1)) & (target[0] ?? 0)
 
-    for (let i = 1; i < NUM_SLICES - 2; ++i) {
+    for (let i = 1; i < length - 1; ++i) {
       source[i]! |=
-        (source[i - 1]! | (source[i]! >>> 1) | (source[i]! << 1) | source[i + 1]!) & target[i]!
+        (source[i - 1]! | (source[i]! >>> 1) | (source[i]! << 1) | (source[i + 1] ?? 0)) & (target[i] ?? 0)
     }
 
-    source[NUM_SLICES - 1]! |=
-      (source[NUM_SLICES - 2]! | (source[NUM_SLICES - 1]! >>> 1) | (source[NUM_SLICES - 1]! << 1)) &
-      target[NUM_SLICES - 1]!
+    if (length > 1) {
+      source[length - 1]! |=
+        (source[length - 2]! | (source[length - 1]! >>> 1) | (source[length - 1]! << 1)) & (target[length - 1] ?? 0)
+    }
 
-    for (let i = 0; i < NUM_SLICES; ++i) {
+    for (let i = 0; i < length; ++i) {
       if (temp[i]! !== source[i]!) {
-        for (let j = 0; j < NUM_SLICES; ++j) {
+        for (let j = 0; j < length; ++j) {
           temp[j] = source[j]!
         }
         continue flooding
@@ -274,30 +278,36 @@ export function rectangle(width: number, height: number): Stones {
 }
 
 export function stonesAnd(stones: Stones, ...rest: Stones[]): Stones {
-  const result = clone(stones)
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  const length = Math.max(stones.length, ...rest.map((s) => s.length))
+  const result = new Uint32Array(length)
+  for (let i = 0; i < length; ++i) {
+    result[i] = stones[i] ?? 0
     for (let j = 0; j < rest.length; j++) {
-      result[i]! &= rest[j]![i]!
+      result[i]! &= rest[j]![i] ?? 0
     }
   }
   return result
 }
 
 export function stonesOr(stones: Stones, ...rest: Stones[]): Stones {
-  const result = clone(stones)
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  const length = Math.max(stones.length, ...rest.map((s) => s.length))
+  const result = new Uint32Array(length)
+  for (let i = 0; i < length; ++i) {
+    result[i] = stones[i] ?? 0
     for (let j = 0; j < rest.length; j++) {
-      result[i]! |= rest[j]![i]!
+      result[i]! |= rest[j]![i] ?? 0
     }
   }
   return result
 }
 
 export function stonesXor(stones: Stones, ...rest: Stones[]): Stones {
-  const result = clone(stones)
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  const length = Math.max(stones.length, ...rest.map((s) => s.length))
+  const result = new Uint32Array(length)
+  for (let i = 0; i < length; ++i) {
+    result[i] = stones[i] ?? 0
     for (let j = 0; j < rest.length; j++) {
-      result[i]! ^= rest[j]![i]!
+      result[i]! ^= rest[j]![i] ?? 0
     }
   }
   return result
@@ -319,18 +329,24 @@ export function invertInPlace(stones: Stones): Stones {
 }
 
 export function liberties(stones: Stones, empty: Stones): Stones {
-  const result = emptyStones()
-  result[0] = ((stones[0]! << 1) | (stones[0]! >>> 1) | stones[1]!) & ~stones[0]! & empty[0]!
-  for (let i = 1; i < NUM_SLICES - 1; ++i) {
-    result[i]! =
-      (stones[i - 1]! | (stones[i]! << 1) | (stones[i]! >>> 1) | stones[i + 1]!) &
-      ~stones[i]! &
-      empty[i]!
+  const length = Math.max(stones.length, empty.length)
+  const result = new Uint32Array(length)
+  if (!length) {
+    return result
   }
-  result[NUM_SLICES - 1]! =
-    (stones[NUM_SLICES - 2]! | (stones[NUM_SLICES - 1]! << 1) | (stones[NUM_SLICES - 1]! >>> 1)) &
-    ~stones[NUM_SLICES - 1]! &
-    empty[NUM_SLICES - 1]!
+  result[0] = (((stones[0] ?? 0) << 1) | ((stones[0] ?? 0) >>> 1) | (stones[1] ?? 0)) & ~(stones[0] ?? 0) & (empty[0] ?? 0)
+  for (let i = 1; i < length - 1; ++i) {
+    result[i]! =
+      ((stones[i - 1] ?? 0) | ((stones[i] ?? 0) << 1) | ((stones[i] ?? 0) >>> 1) | (stones[i + 1] ?? 0)) &
+      ~(stones[i] ?? 0) &
+      (empty[i] ?? 0)
+  }
+  if (length > 1) {
+    result[length - 1]! =
+      ((stones[length - 2] ?? 0) | ((stones[length - 1] ?? 0) << 1) | ((stones[length - 1] ?? 0) >>> 1)) &
+      ~(stones[length - 1] ?? 0) &
+      (empty[length - 1] ?? 0)
+  }
   return result
 }
 
@@ -398,7 +414,7 @@ export function stoneAt(stones: Stones, x: number, y: number): boolean {
 
 export function dots(stones: Stones): Stones[] {
   const result: Stones[] = []
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  for (let i = 0; i < stones.length; ++i) {
     let slice = stones[i]
     let p = 1
     while (slice) {
@@ -417,7 +433,7 @@ export function dots(stones: Stones): Stones[] {
 export function chains(stones: Stones): Stones[] {
   stones = clone(stones)
   const result: Stones[] = []
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  for (let i = 0; i < stones.length; ++i) {
     for (let j = 0; j < WIDTH; j += 2) {
       const chain = emptyStones()
       chain[i] = 3 << j

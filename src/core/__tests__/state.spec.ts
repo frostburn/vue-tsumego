@@ -41,6 +41,24 @@ function immortalStraightTwo(): State {
 }
 
 describe('Go game state', () => {
+  it('trims bitboards to the visual area height', () => {
+    const s = rectangleSix()
+
+    expect(s.visualArea.length).toBe(19)
+    s.trim()
+
+    expect(s.height).toBe(3)
+    expect(s.visualArea.length).toBe(3)
+    expect(s.logicalArea.length).toBe(3)
+    expect(s.player.length).toBe(3)
+    expect(s.opponent.length).toBe(3)
+    expect(s.ko.length).toBe(3)
+    expect(s.target.length).toBe(3)
+    expect(s.immortal.length).toBe(3)
+    expect(s.external.length).toBe(3)
+    expect(s.dead.length).toBe(3)
+  })
+
   it('plays through the rectangle six capture mainline', () => {
     let r: MoveResult
     const s = rectangleSix()

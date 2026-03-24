@@ -243,6 +243,25 @@ export class State {
   }
 
   /**
+   * Shrink all bitboards to the smallest number of rows needed by the current visual area.
+   */
+  trim(): this {
+    const height = this.height
+
+    this.visualArea = this.visualArea.slice(0, height)
+    this.logicalArea = this.logicalArea.slice(0, height)
+    this.player = this.player.slice(0, height)
+    this.opponent = this.opponent.slice(0, height)
+    this.ko = this.ko.slice(0, height)
+    this.target = this.target.slice(0, height)
+    this.immortal = this.immortal.slice(0, height)
+    this.external = this.external.slice(0, height)
+    this.dead = this.dead.slice(0, height)
+
+    return this
+  }
+
+  /**
    * An array of strings suitable for rendering the goban in the console.
    */
   displayLines(): string[] {
