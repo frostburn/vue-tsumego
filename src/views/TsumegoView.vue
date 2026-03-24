@@ -302,7 +302,7 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
   margin-right: 1em;
 }
 .sister-tsumego.disabled {
-  color: hsla(160, 50%, 17%, 1);
+  color: var(--color-link-disabled);
   cursor: default;
 }
 .sister-tsumego.disabled.start {

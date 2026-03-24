@@ -313,17 +313,17 @@ button.inline-control {
   padding: 0;
   border: none;
   background: transparent;
-  color: hsla(160, 100%, 37%, 1);
+  color: var(--color-link);
   font: inherit;
   cursor: pointer;
 }
 button.inline-control:disabled {
-  color: hsla(160, 50%, 17%, 1);
+  color: var(--color-link-disabled);
   cursor: default;
 }
 @media (hover: hover) {
   button.inline-control:not(:disabled):hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
+    background-color: var(--color-link-hover-bg);
   }
 }
 </style>
