@@ -18,7 +18,7 @@ function straightTwo(): State {
   s.player = stonesXor(s.visualArea, s.logicalArea)
   s.target = clone(s.player)
 
-  return s
+  return s.trim()
 }
 
 function straightThree(): State {
@@ -29,7 +29,7 @@ function straightThree(): State {
   s.player = stonesXor(s.visualArea, s.logicalArea)
   s.target = clone(s.player)
 
-  return s
+  return s.trim()
 }
 
 function rectangleSix(): State {
@@ -42,7 +42,7 @@ function rectangleSix(): State {
   s.target = clone(s.opponent)
   s.player = south(south(south(rectangle(4, 2))))
   s.immortal = stonesXor(s.player, s.external)
-  return s
+  return s.trim()
 }
 
 describe('Go game graph', () => {
