@@ -187,7 +187,7 @@ function init() {
       data.value = json
       return json
     })
-    .then((json) => getSolutionInfo(props.collection, json))
+    .then((json) => getSolutionInfo(props.collection, { state: json.state! }))
     .then((json) => {
       info.value = json
       busy.value = false
