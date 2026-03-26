@@ -1,5 +1,7 @@
 import {
   type Stones,
+  WIDTH,
+  HEIGHT,
   emptyStones,
   widthOf,
   heightOf,
@@ -25,11 +27,12 @@ import {
   subtract,
   clone,
   stonesCount,
-  padStones,
-  stripStones,
+  arrayToStones,
+  stonesToArray,
   chains,
   gridOf,
   coordsOf,
+  toHeight,
 } from './bitboard'
 
 // Result of making a move
@@ -111,7 +114,7 @@ const KO_THREAT_Q7 = SCORE_Q7_SCALE / 32
 export const KO_THREAT_BONUS = KO_THREAT_Q7 / SCORE_Q7_SCALE
 
 /**
- * A 32x19 goban of go stones suitable for navigating tsumego (go problems)
+ * A 16x16 goban of go stones suitable for navigating tsumego (go problems)
  * Everything is encoded from the perspective of the player to play.
  **/
 export class State {
@@ -160,23 +163,24 @@ export class State {
   dead: Stones
 
   /**
-   * Construct a new empty 32x19 goban.
+   * Construct a new empty 16x16 goban, a 16xheight goban or clone an existing state
    */
-  constructor(state?: State) {
-    if (state === undefined) {
-      this.visualArea = emptyStones()
-      this.logicalArea = emptyStones()
-      this.player = emptyStones()
-      this.opponent = emptyStones()
-      this.ko = emptyStones()
-      this.target = emptyStones()
-      this.immortal = emptyStones()
-      this.external = emptyStones()
+  constructor(state?: State | number) {
+    if (state === undefined || typeof state === 'number') {
+      const height = state ?? HEIGHT
+      this.visualArea = emptyStones(height)
+      this.logicalArea = emptyStones(height)
+      this.player = emptyStones(height)
+      this.opponent = emptyStones(height)
+      this.ko = emptyStones(height)
+      this.target = emptyStones(height)
+      this.immortal = emptyStones(height)
+      this.external = emptyStones(height)
       this.passes = 0
       this.koThreats = 0
       this.button = 0
       this.whiteToPlay = false
-      this.dead = emptyStones()
+      this.dead = emptyStones(height)
     } else {
       this.visualArea = clone(state.visualArea)
       this.logicalArea = clone(state.logicalArea)
@@ -198,19 +202,23 @@ export class State {
    * Update game state from serialized data.
    */
   assignFromJSON(obj: StateJSON) {
-    this.visualArea = padStones(obj.visualArea)
-    this.logicalArea = padStones(obj.logicalArea)
-    this.player = padStones(obj.player)
-    this.opponent = padStones(obj.opponent)
-    this.ko = padStones(obj.ko)
-    this.target = padStones(obj.target)
-    this.immortal = padStones(obj.immortal)
-    this.external = padStones(obj.external)
+    this.visualArea = arrayToStones(obj.visualArea)
+    const height = this.height
+
+    this.visualArea = toHeight(this.visualArea, height)
+
+    this.logicalArea = arrayToStones(obj.logicalArea, height)
+    this.player = arrayToStones(obj.player, height)
+    this.opponent = arrayToStones(obj.opponent, height)
+    this.ko = arrayToStones(obj.ko, height)
+    this.target = arrayToStones(obj.target, height)
+    this.immortal = arrayToStones(obj.immortal, height)
+    this.external = arrayToStones(obj.external, height)
     this.passes = obj.passes
     this.koThreats = obj.koThreats
     this.button = obj.button
     this.whiteToPlay = obj.whiteToPlay
-    this.dead = emptyStones()
+    this.dead = emptyStones(height)
   }
 
   /**
@@ -218,14 +226,14 @@ export class State {
    */
   toJSON() {
     return {
-      visualArea: stripStones(this.visualArea),
-      logicalArea: stripStones(this.logicalArea),
-      player: stripStones(this.player),
-      opponent: stripStones(this.opponent),
-      ko: stripStones(this.ko),
-      target: stripStones(this.target),
-      immortal: stripStones(this.immortal),
-      external: stripStones(this.external),
+      visualArea: stonesToArray(this.visualArea),
+      logicalArea: stonesToArray(this.logicalArea),
+      player: stonesToArray(this.player),
+      opponent: stonesToArray(this.opponent),
+      ko: stonesToArray(this.ko),
+      target: stonesToArray(this.target),
+      immortal: stonesToArray(this.immortal),
+      external: stonesToArray(this.external),
       passes: this.passes,
       koThreats: this.koThreats,
       button: this.button,
@@ -240,6 +248,26 @@ export class State {
 
   get height(): number {
     return heightOf(this.visualArea)
+  }
+
+  trim(): this {
+    const height = this.height
+
+    this.visualArea = toHeight(this.visualArea, height)
+    this.logicalArea = toHeight(this.logicalArea, height)
+    this.player = toHeight(this.player, height)
+    this.opponent = toHeight(this.opponent, height)
+    this.ko = toHeight(this.ko, height)
+    this.target = toHeight(this.target, height)
+    this.immortal = toHeight(this.immortal, height)
+    this.external = toHeight(this.external, height)
+    this.dead = toHeight(this.dead, height)
+
+    return this
+  }
+
+  passMove(): Stones {
+    return emptyStones(this.height)
   }
 
   /**
@@ -354,6 +382,7 @@ export class State {
   makeMove(move: Stones): MoveResult
   makeMove(x: number, y: number): MoveResult
   makeMove(moveOrX: Stones | number, y?: number): MoveResult {
+    const height = this.height
     let move: Stones | undefined = undefined
     let x = -1
     if (typeof moveOrX === 'number') {
@@ -362,10 +391,10 @@ export class State {
         throw new Error('Y-coordinate must be given with x-coordinate')
       }
       if (x >= 0) {
-        move = single(x, y)
+        move = single(x, y, height)
       }
     } else {
-      move = moveOrX
+      move = toHeight(moveOrX, height)
       ;({ x, y } = coordsOf(move))
     }
     let result = MoveResult.Normal
@@ -416,7 +445,7 @@ export class State {
 
     // Abort if move outside empty logical area
     const nonEmpty = stonesOr(
-      stonesNot(this.logicalArea),
+      stonesNot(this.logicalArea, height),
       stonesXor(this.player, this.external),
       this.opponent,
     )
@@ -425,7 +454,6 @@ export class State {
     }
 
     if (overlaps(move, this.external)) {
-      // Note that the C backend normalizes move placement inside the group of external liberties.
       merge(this.immortal, move)
       flip(this.external, move)
       result = MoveResult.FillExternal
@@ -435,7 +463,7 @@ export class State {
     clear(this.ko)
 
     // Opponent's stones killed
-    const kill = emptyStones()
+    const kill = emptyStones(height)
 
     // Potential liberties for opponent's stones (visual non-logical liberties count as permanent)
     const empty = stonesAnd(this.visualArea, invertInPlace(stonesXor(this.player, this.external)))
@@ -446,22 +474,25 @@ export class State {
       flood(chain, this.opponent)
       if (isEmpty(liberties(chain, empty)) && !overlaps(chain, this.immortal)) {
         merge(kill, chain)
-        flip(this.opponent, chain)
+        // Note that you'd need to do `flip(this.opponent, chain)` here and count the prisoners for Japanse-style scoring
       }
     }
     const killChain = killChain_.bind(this)
-    chain = single(x, y - 1)
+    chain = single(x, y - 1, height)
     killChain()
-    chain = single(x + 1, y)
+    chain = single(x + 1, y, height)
     killChain()
-    chain = single(x - 1, y)
+    chain = single(x - 1, y, height)
     killChain()
-    chain = single(x, y + 1)
+    chain = single(x, y + 1, height)
     killChain()
+
+    // Chinese-style scoring only
+    flip(this.opponent, kill)
 
     // Check legality
     chain = clone(move)
-    flood(chain, stonesAnd(this.player, stonesNot(this.external)))
+    flood(chain, stonesAnd(this.player, stonesNot(this.external, height)))
     let libs = liberties(
       chain,
       stonesAnd(this.visualArea, invertInPlace(stonesXor(this.opponent, this.external))),
@@ -476,7 +507,7 @@ export class State {
     }
 
     // Check if a single stone was killed and the played stone was left alone in atari
-    libs = liberties(chain, stonesAnd(this.logicalArea, stonesNot(this.opponent)))
+    libs = liberties(chain, stonesAnd(this.logicalArea, stonesNot(this.opponent, height)))
     if (isSingle(kill) && isSingle(chain) && equals(libs, kill)) {
       this.ko = kill
     }
@@ -509,13 +540,15 @@ export class State {
 
   swapPlayers() {
     ;[this.player, this.opponent] = [this.opponent, this.player]
-    this.ko = emptyStones()
+    clear(this.ko)
     this.koThreats = -this.koThreats
     this.button = -this.button
     this.whiteToPlay = !this.whiteToPlay
   }
 
   flipStones(stones: Stones, external: Stones, flipWhite: boolean) {
+    const height = this.height
+    stones = toHeight(stones, height)
     const player = this.whiteToPlay === flipWhite ? this.player : this.opponent
     const opponent = this.whiteToPlay === flipWhite ? this.opponent : this.player
 
@@ -529,8 +562,8 @@ export class State {
     merge(this.logicalArea, stones)
     merge(this.immortal, newImmortal)
     merge(this.external, newExternal)
-    flip(player, stonesXor(stones, newExternal, newImmortal))
-    for (const chain of chains(stonesAnd(player, stonesNot(this.external)))) {
+    flip(player, stones, newExternal, newImmortal)
+    for (const chain of chains(stonesAnd(player, stonesNot(this.external, height)))) {
       if (overlaps(chain, this.immortal)) {
         merge(this.immortal, chain)
       }
@@ -538,7 +571,7 @@ export class State {
         merge(this.target, chain)
       }
     }
-    subtract(this.logicalArea, stonesOr(this.immortal, this.target))
+    subtract(this.logicalArea, this.immortal, this.target)
   }
 
   availableBlackFlips() {
@@ -566,7 +599,7 @@ export class State {
       for (let x = 0; x < width; ++x) {
         id++
         const r = new State(this).makeMove(x, y)
-        const move = single(x, y)
+        const move = single(x, y, height)
         if (overlaps(move, empty)) {
           let t: GridSpace['type'] = 'outside'
           if (overlaps(move, this.external)) {
@@ -632,7 +665,7 @@ export class State {
       this.external,
     )
 
-    const notExt = stonesNot(this.external)
+    const notExt = stonesNot(this.external, this.height)
     const playerControlled = stonesAnd(this.player, notExt)
     const opponentControlled = stonesAnd(this.opponent, notExt)
 
@@ -644,12 +677,12 @@ export class State {
 
   // Area score
   areaScore(): number {
+    const height = this.height
     const empty = stonesAnd(this.visualArea, invertInPlace(stonesOr(this.player, this.opponent)))
-    merge(empty, this.external)
-    merge(empty, this.dead)
+    merge(empty, this.external, this.dead)
 
-    const notExt = stonesNot(this.external)
-    const notDead = stonesNot(this.dead)
+    const notExt = stonesNot(this.external, height)
+    const notDead = stonesNot(this.dead, height)
     const playerControlled = stonesAnd(this.player, notExt, notDead)
     const opponentControlled = stonesAnd(this.opponent, notExt, notDead)
 
@@ -679,13 +712,20 @@ export class State {
 
   stretchTo(width: number, height: number) {
     if ((width || height) && isEmpty(this.visualArea)) {
-      this.visualArea = single(0, 0)
+      this.visualArea = single(0, 0, 1)
+    }
+    if (width > WIDTH) {
+      throw new Error(`Cannot stretch width beyond implementation limit ${WIDTH}`)
     }
     while (this.width < width) {
       merge(this.visualArea, east(this.visualArea))
     }
-    while (this.height < height) {
-      merge(this.visualArea, south(this.visualArea))
+    if (this.height < height) {
+      this.visualArea = toHeight(this.visualArea, height)
+      while (this.height < height) {
+        merge(this.visualArea, south(this.visualArea))
+      }
+      this.trim()
     }
   }
 

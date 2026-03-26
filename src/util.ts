@@ -1,4 +1,4 @@
-import { padStones } from './core/bitboard'
+import { arrayToStones } from './core/bitboard'
 import { State, type StateJSON } from './core/state'
 import { type SolutionInfo, type MoveInfo, encode, decode } from './core/solver'
 
@@ -92,7 +92,7 @@ export async function getSolutionInfo(collection: string, state: State | { state
 
 export async function markDeadStones(collection: string, state: State) {
   const json = await getSolutionInfo(collection, state)
-  state.dead = padStones(json.deadStones ?? [])
+  state.dead = arrayToStones(json.deadStones ?? [], state.height)
 }
 
 const URL_SAFE_CHARS64 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_'
