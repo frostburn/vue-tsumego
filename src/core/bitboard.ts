@@ -1,6 +1,6 @@
-// Stones of a single color are represented as bitboard consisting of 19 unsigned integers
-// The height of the goban is fixed at 19
-export type Stones = Uint32Array
+// Stones of a single color are represented as a bitboard consisting of (typically) 16 unsigned integers for rows
+// The width of the goban is fixed at 16
+export type Stones = Uint16Array
 
 // Coordinates for a single stone or -1, -1 for a pass
 export type Coords = {
@@ -9,30 +9,28 @@ export type Coords = {
 }
 
 // Bitboard constants
-export const WIDTH = 32
-export const HEIGHT = 19
+export const WIDTH = 16
+export const HEIGHT = 16 // Not a hard limit, arrays may be trimmed for efficiency
 
-const EAST_STONE = 2147483648
-
-// Large scale structure
-export const NUM_SLICES = HEIGHT
+// Note: Bitboard semantics are mirrored from numeric rendering
+const EAST_STONE_32 = 0b10000000000000000000000000000000
 
 /**
  * Obtain an empty bitboard stack of stones.
  * @returns An empty goban.
  */
-export function emptyStones(): Stones {
-  return new Uint32Array(NUM_SLICES)
+export function emptyStones(height = HEIGHT): Stones {
+  return new Uint16Array(height)
 }
 
 /**
  * Obtain a random collection of stones.
  * @returns A gobanful with 50% chance of air or stones.
  */
-export function randomStones(): Stones {
-  const stones = emptyStones()
-  for (let i = 0; i < NUM_SLICES; ++i) {
-    stones[i] = Math.random() * 2 ** 32
+export function randomStones(height = HEIGHT): Stones {
+  const stones = emptyStones(height)
+  for (let i = 0; i < height; ++i) {
+    stones[i] = Math.random() * 2 ** WIDTH
   }
   return stones
 }
@@ -43,7 +41,7 @@ export function randomStones(): Stones {
  * @returns A copy of the stones.
  */
 export function clone(stones: Stones): Stones {
-  return new Uint32Array(stones)
+  return new Uint16Array(stones)
 }
 
 /**
@@ -78,13 +76,15 @@ export function logStones(stones: Stones): void {
  * Create a collection consisting of only a single stone at the given coordinates.
  * @param x Horizontal coordinate. 0-indexed, left to right.
  * @param y Vertical coordinate. 0-indexed, top to bottom.
+ * @param height Logical height of the resulting bitboard
  * @returns A collection of a single stone or nothing if `x` is negative.
  */
-export function single(x: number, y: number): Stones {
-  const result = emptyStones()
-  if (x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT) {
-    result[y] = 1 << x
+export function single(x: number, y: number, height = HEIGHT): Stones {
+  if (x < 0 || x >= WIDTH) {
+    return emptyStones(height)
   }
+  const result = emptyStones(height)
+  result[y] = 1 << x
   return result
 }
 
@@ -121,17 +121,27 @@ export function clear(stones: Stones) {
   stones.fill(0)
 }
 
+// Test if two collections of stones are the same if padded with zeros
 export function equals(a: Stones, b: Stones) {
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  if (a.length > b.length) {
+    ;[a, b] = [b, a]
+  }
+  for (let i = 0; i < a.length; ++i) {
     if (a[i] !== b[i]) {
+      return false
+    }
+  }
+  for (let i = a.length; i < b.length; ++i) {
+    if (b[i]) {
       return false
     }
   }
   return true
 }
 
+// Test if two collections of stones share members
 export function overlaps(a: Stones, b: Stones) {
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  for (let i = Math.min(a.length, b.length) - 1; i >= 0; --i) {
     if (a[i]! & b[i]!) {
       return true
     }
@@ -140,47 +150,86 @@ export function overlaps(a: Stones, b: Stones) {
 }
 
 /**
- * Add stones from `b` to `a`, modifying `a` in place.
+ * Add stones from `...rest` to `a`, modifying `a` in place.
  * @param a Stones to merge into.
- * @param b Stones to merge.
+ * @param rest Stones to merge.
+ * @throws An error if `a` doesn't have the height to merge the stones
+ * @returns `a` for chaining
  */
-export function merge(a: Stones, b: Stones) {
-  for (let i = 0; i < a.length; ++i) {
-    a[i]! |= b[i]!
+export function merge(a: Stones, ...rest: Stones[]) {
+  for (const b of rest) {
+    if (a.length < b.length) {
+      throw new Error(`The target height ${a.length} is less than source height ${b.length}.`)
+    }
+    for (let i = 0; i < a.length; ++i) {
+      // XXX: Abuses `undefined` aliasing to `0`
+      a[i]! |= b[i]!
+    }
   }
+  return a
 }
 
 /**
- * Constrain stones in `a` to those in `b`, modifying `a` in place.
+ * Constrain stones in `a` to those in all of `...rest`, modifying `a` in place.
  * @param a Stones to mask.
- * @param b Stones to mask by.
+ * @param rest Stones to mask by.
+ * @returns `a` for chaining
  */
-export function mask(a: Stones, b: Stones) {
-  for (let i = 0; i < a.length; ++i) {
-    a[i]! &= b[i]!
+export function mask(a: Stones, ...rest: Stones[]) {
+  for (const b of rest) {
+    for (let i = 0; i < a.length; ++i) {
+      // XXX: Abuses `undefined` aliasing to `0`
+      a[i]! &= b[i]!
+    }
   }
+  return a
 }
 
 /**
- * Flip stones in `a` from empty space and vice-versa according to `b`
+ * Flip stones in `a` to empty space and vice-versa according to `...rest`, modifying `a` in place.
  * @param a Stones to flip.
- * @param b Places to be flipped.
+ * @param rest Places to be flipped.
+ * @throws An error if `a` doesn't have the height to flip the stones
+ * @returns `a` for chaining
  */
-export function flip(a: Stones, b: Stones) {
-  for (let i = 0; i < a.length; ++i) {
-    a[i]! ^= b[i]!
+export function flip(a: Stones, ...rest: Stones[]) {
+  for (const b of rest) {
+    if (a.length < b.length) {
+      throw new Error(`The target height ${a.length} is less than source height ${b.length}.`)
+    }
+    for (let i = 0; i < a.length; ++i) {
+      // XXX: Abuses `undefined` aliasing to `0`
+      a[i]! ^= b[i]!
+    }
   }
+  return a
 }
 
 /**
- * Remove stones `b` from `a`, modifying `a` in place.
+ * Remove stones `...rest` from `a`, modifying `a` in place.
  * @param a Stones to subtract from.
- * @param b Stones to subtract.
+ * @param rest Stones to subtract.
+ * @returns `a` for chaining
  */
-export function subtract(a: Stones, b: Stones) {
-  for (let i = 0; i < a.length; ++i) {
-    a[i]! &= ~b[i]!
+export function subtract(a: Stones, ...rest: Stones[]) {
+  for (const b of rest) {
+    for (let i = 0; i < a.length; ++i) {
+      a[i]! &= ~b[i]!
+    }
   }
+  return a
+}
+
+/**
+ * Population count (aka hamming weight) function. Counts the number of set (i.e. 1-valued) bits in a 16-bit integer.
+ * @param x 16-bit integer.
+ * @returns The number of set bits in the input.
+ */
+export function popcount16(x: number) {
+  x -= (x >> 1) & 0x5555
+  x = (x & 0x3333) + ((x >> 2) & 0x3333)
+  x = (x + (x >> 4)) & 0x0f0f
+  return (x + (x >> 8)) & 0x1f
 }
 
 /**
@@ -199,7 +248,7 @@ export function popcount(x: number) {
 }
 
 export function stonesCount(stones: Stones) {
-  return stones.map(popcount).reduce((a, b) => a + b)
+  return stones.map(popcount16).reduce((a, b) => a + b, 0)
 }
 
 /**
@@ -212,22 +261,22 @@ export function bleed(source: Stones, target: Stones) {
     return
   }
 
-  const temp = new Uint32Array(source)
+  const len = source.length
+  const temp = new Uint16Array(source)
   flooding: while (true) {
     source[0]! |= (source[1]! | (source[0]! >>> 1) | (source[0]! << 1)) & target[0]!
 
-    for (let i = 1; i < NUM_SLICES - 2; ++i) {
+    for (let i = 1; i < len - 1; ++i) {
       source[i]! |=
         (source[i - 1]! | (source[i]! >>> 1) | (source[i]! << 1) | source[i + 1]!) & target[i]!
     }
 
-    source[NUM_SLICES - 1]! |=
-      (source[NUM_SLICES - 2]! | (source[NUM_SLICES - 1]! >>> 1) | (source[NUM_SLICES - 1]! << 1)) &
-      target[NUM_SLICES - 1]!
+    source[len - 1]! |=
+      (source[len - 2]! | (source[len - 1]! >>> 1) | (source[len - 1]! << 1)) & target[len - 1]!
 
-    for (let i = 0; i < NUM_SLICES; ++i) {
+    for (let i = 0; i < len; ++i) {
       if (temp[i]! !== source[i]!) {
-        for (let j = 0; j < NUM_SLICES; ++j) {
+        for (let j = 0; j < len; ++j) {
           temp[j] = source[j]!
         }
         continue flooding
@@ -248,7 +297,7 @@ export function flood(source: Stones, target: Stones) {
 }
 
 export function widthOf(stones: Stones): number {
-  return stones.reduce((acc, cur) => Math.max(acc, WIDTH - Math.clz32(cur)), 0)
+  return stones.reduce((acc, cur) => Math.max(acc, 32 - Math.clz32(cur)), 0)
 }
 
 export function heightOf(stones: Stones): number {
@@ -261,52 +310,58 @@ export function heightOf(stones: Stones): number {
   return result
 }
 
-export function rectangle(width: number, height: number): Stones {
-  const result = emptyStones()
+export function rectangle(width: number, height: number, trueHeight?: number): Stones {
+  const result = emptyStones(trueHeight ?? height)
   if (!width || !height) {
     return result
   }
-  result[0] = width === WIDTH ? ~0 : (1 << width) - 1
-  for (let i = 1; i < height; ++i) {
-    result[i] = result[0]
+  // Note that 32-bit fields would need a hack
+  // width === WIDTH ? ~0 : (1 << width) - 1
+
+  result.fill((1 << width) - 1)
+  for (let i = height; i < result.length; ++i) {
+    result[i] = 0
   }
   return result
 }
 
 export function stonesAnd(stones: Stones, ...rest: Stones[]): Stones {
   const result = clone(stones)
-  for (let i = 0; i < NUM_SLICES; ++i) {
-    for (let j = 0; j < rest.length; j++) {
-      result[i]! &= rest[j]![i]!
+  for (const b of rest) {
+    for (let i = 0; i < result.length; ++i) {
+      result[i]! &= b[i]!
     }
   }
   return result
 }
 
-export function stonesOr(stones: Stones, ...rest: Stones[]): Stones {
-  const result = clone(stones)
-  for (let i = 0; i < NUM_SLICES; ++i) {
-    for (let j = 0; j < rest.length; j++) {
-      result[i]! |= rest[j]![i]!
+export function stonesOr(...rest: Stones[]): Stones {
+  const height = rest.reduce((acc, cur) => Math.max(acc, cur.length), 0)
+  const result = emptyStones(height)
+  for (const b of rest) {
+    for (let i = 0; i < height; ++i) {
+      result[i]! |= b[i]!
     }
   }
   return result
 }
 
-export function stonesXor(stones: Stones, ...rest: Stones[]): Stones {
-  const result = clone(stones)
-  for (let i = 0; i < NUM_SLICES; ++i) {
-    for (let j = 0; j < rest.length; j++) {
-      result[i]! ^= rest[j]![i]!
+export function stonesXor(...rest: Stones[]): Stones {
+  const height = rest.reduce((acc, cur) => Math.max(acc, cur.length), 0)
+  const result = emptyStones(height)
+  for (const b of rest) {
+    for (let i = 0; i < height; ++i) {
+      result[i]! ^= b[i]!
     }
   }
   return result
 }
 
-export function stonesNot(stones: Stones): Stones {
-  const result = clone(stones)
+// Invert empty space to stones and vice-versa. Pad full rows up to `height`.
+export function stonesNot(stones: Stones, height = HEIGHT): Stones {
+  const result = emptyStones(height)
   for (let i = 0; i < result.length; ++i) {
-    result[i]! = ~result[i]!
+    result[i]! = ~stones[i]!
   }
   return result
 }
@@ -319,18 +374,19 @@ export function invertInPlace(stones: Stones): Stones {
 }
 
 export function liberties(stones: Stones, empty: Stones): Stones {
-  const result = emptyStones()
+  const len = empty.length
+  const result = emptyStones(len)
   result[0] = ((stones[0]! << 1) | (stones[0]! >>> 1) | stones[1]!) & ~stones[0]! & empty[0]!
-  for (let i = 1; i < NUM_SLICES - 1; ++i) {
+  for (let i = 1; i < len - 1; ++i) {
     result[i]! =
       (stones[i - 1]! | (stones[i]! << 1) | (stones[i]! >>> 1) | stones[i + 1]!) &
       ~stones[i]! &
       empty[i]!
   }
-  result[NUM_SLICES - 1]! =
-    (stones[NUM_SLICES - 2]! | (stones[NUM_SLICES - 1]! << 1) | (stones[NUM_SLICES - 1]! >>> 1)) &
-    ~stones[NUM_SLICES - 1]! &
-    empty[NUM_SLICES - 1]!
+  result[len - 1]! =
+    (stones[len - 2]! | (stones[len - 1]! << 1) | (stones[len - 1]! >>> 1)) &
+    ~stones[len - 1]! &
+    empty[len - 1]!
   return result
 }
 
@@ -345,6 +401,14 @@ export function south(stones: Stones): Stones {
   const result = clone(stones)
   result.copyWithin(1, 0)
   result[0] = 0
+  return result
+}
+
+export function southPlus(stones: Stones, amount = 1): Stones {
+  const result = emptyStones(stones.length + amount)
+  for (let i = 0; i < stones.length; ++i) {
+    result[i + amount] = stones[i]!
+  }
   return result
 }
 
@@ -390,20 +454,19 @@ export function isSingle(stones: Stones): boolean {
  * @returns `true` if there is a stone at the given coordinates.
  */
 export function stoneAt(stones: Stones, x: number, y: number): boolean {
-  if (y < 0 || y >= stones.length) {
-    return false
-  }
+  // XXX: Abuses `undefined` aliasing to `0`
   return !!(stones[y]! & (1 << x))
 }
 
 export function dots(stones: Stones): Stones[] {
+  const len = stones.length
   const result: Stones[] = []
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  for (let i = 0; i < len; ++i) {
     let slice = stones[i]
     let p = 1
     while (slice) {
       if (slice & p) {
-        const dot = emptyStones()
+        const dot = emptyStones(len)
         dot[i] = p
         result.push(dot)
         slice ^= p
@@ -417,9 +480,9 @@ export function dots(stones: Stones): Stones[] {
 export function chains(stones: Stones): Stones[] {
   stones = clone(stones)
   const result: Stones[] = []
-  for (let i = 0; i < NUM_SLICES; ++i) {
+  for (let i = 0; i < stones.length; ++i) {
     for (let j = 0; j < WIDTH; j += 2) {
-      const chain = emptyStones()
+      const chain = emptyStones(stones.length)
       chain[i] = 3 << j
       if (overlaps(chain, stones)) {
         flood(chain, stones)
@@ -434,7 +497,7 @@ export function chains(stones: Stones): Stones[] {
 export function witherBy(stones: Stones, amount: number) {
   for (let i = 0; i < stones.length; ++i) {
     while (stones[i] && amount) {
-      stones[i]! ^= EAST_STONE >>> Math.clz32(stones[i]!)
+      stones[i]! ^= EAST_STONE_32 >>> Math.clz32(stones[i]!)
       amount--
     }
   }
@@ -444,7 +507,7 @@ export function coordsOf(move: Stones): Coords {
   for (let y = 0; y < move.length; ++y) {
     if (move[y]) {
       return {
-        x: WIDTH - 1 - Math.clz32(move[y]!),
+        x: 31 - Math.clz32(move[y]!),
         y,
       }
     }
@@ -471,9 +534,10 @@ export function gridOf(stones: Stones): Coords[] {
 
 /**
  * Convert an `Array` of numbers to `Stones`.
+ * Pads zeros up to `height` if provided
  */
-export function padStones(slices: number[]): Stones {
-  const result = emptyStones()
+export function arrayToStones(slices: number[], height?: number): Stones {
+  const result = emptyStones(height ?? slices.length)
   for (let i = 0; i < slices.length; ++i) {
     result[i] = slices[i]!
   }
@@ -483,10 +547,24 @@ export function padStones(slices: number[]): Stones {
 /**
  * Convert `Stones` to an `Array` of numbers.
  */
-export function stripStones(stones: Stones): number[] {
+export function stonesToArray(stones: Stones): number[] {
   const result = Array.from(stones)
   while (result.length && !result[result.length - 1]) {
     result.pop()
+  }
+  return result
+}
+
+export function toHeight(stones: Stones, height = HEIGHT): Stones {
+  if (stones.length === height) {
+    return stones
+  }
+  if (stones.length > height) {
+    return stones.slice(0, height)
+  }
+  const result = emptyStones(height)
+  for (let i = 0; i < stones.length; ++i) {
+    result[i] = stones[i]!
   }
   return result
 }

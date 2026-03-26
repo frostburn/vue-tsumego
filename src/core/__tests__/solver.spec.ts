@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { clone, rectangle, stonesXor, south, merge } from '../bitboard'
+import { clone, rectangle, stonesXor, southPlus, merge } from '../bitboard'
 import { State, TARGET_CAPTURED_SCORE, BUTTON_BONUS } from '../state'
 import { Graph, encode, decode } from '../solver'
 
@@ -18,7 +18,7 @@ function straightTwo(): State {
   s.player = stonesXor(s.visualArea, s.logicalArea)
   s.target = clone(s.player)
 
-  return s
+  return s.trim()
 }
 
 function straightThree(): State {
@@ -29,20 +29,20 @@ function straightThree(): State {
   s.player = stonesXor(s.visualArea, s.logicalArea)
   s.target = clone(s.player)
 
-  return s
+  return s.trim()
 }
 
 function rectangleSix(): State {
   const s = new State()
   s.visualArea = rectangle(4, 5)
-  s.logicalArea = rectangle(3, 2)
-  s.external = south(south(south(rectangle(2, 1))))
+  s.logicalArea = rectangle(3, 2, 5)
+  s.external = southPlus(rectangle(2, 1), 3)
   merge(s.logicalArea, s.external)
   s.opponent = stonesXor(rectangle(4, 3), rectangle(3, 2))
   s.target = clone(s.opponent)
-  s.player = south(south(south(rectangle(4, 2))))
+  s.player = southPlus(rectangle(4, 2), 3)
   s.immortal = stonesXor(s.player, s.external)
-  return s
+  return s.trim()
 }
 
 describe('Go game graph', () => {

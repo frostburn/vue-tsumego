@@ -1,7 +1,6 @@
 import {
   type Stones,
   dots,
-  emptyStones,
   stonesCount,
   stonesAnd,
   equals,
@@ -73,7 +72,7 @@ export function keyspaceSize(root: State): number {
 export function encode(root: State, state: State, moves?: Stones[]): number {
   if (moves === undefined) {
     moves = dots(root.logicalArea)
-    moves.push(emptyStones())
+    moves.push(root.passMove())
   }
   let result = 0
   result = 2 * result + state.passes
@@ -117,10 +116,10 @@ export function encode(root: State, state: State, moves?: Stones[]): number {
 export function decode(root: State, key: number, moves?: Stones[]): State {
   if (moves === undefined) {
     moves = dots(root.logicalArea)
-    moves.push(emptyStones())
+    moves.push(root.passMove())
   }
   const result = new State(root)
-  const effectiveArea = stonesAnd(result.logicalArea, stonesNot(result.external))
+  const effectiveArea = stonesAnd(result.logicalArea, stonesNot(result.external, result.height))
   subtract(result.player, effectiveArea)
   subtract(result.opponent, effectiveArea)
   clear(result.external)
@@ -189,7 +188,7 @@ export class Graph {
   constructor(root: State) {
     this.root = root
     this.moves = dots(root.logicalArea)
-    this.moves.push(emptyStones())
+    this.moves.push(root.passMove())
     const size = keyspaceSize(root)
     this.lows = new Int16Array(size)
     this.highs = new Int16Array(size)

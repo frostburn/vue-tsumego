@@ -6,7 +6,7 @@ import { MoveResult, State } from '../state'
 function debug(state: State) {
   // Shush linter
   state.passes += 0
-  // state.log();
+  // state.log()
 }
 
 function rectangleSix(): State {
@@ -18,7 +18,7 @@ function rectangleSix(): State {
   s.target = clone(s.opponent)
   s.koThreats = -1
 
-  return s
+  return s.trim()
 }
 
 function rectangleSixGoban(): State {
@@ -26,7 +26,7 @@ function rectangleSixGoban(): State {
   s.visualArea = rectangle(3, 2)
   s.logicalArea = clone(s.visualArea)
 
-  return s
+  return s.trim()
 }
 
 function immortalStraightTwo(): State {
@@ -37,7 +37,7 @@ function immortalStraightTwo(): State {
   s.player = stonesXor(s.visualArea, s.logicalArea)
   s.immortal = clone(s.player)
 
-  return s
+  return s.trim()
 }
 
 describe('Go game state', () => {
@@ -96,5 +96,11 @@ describe('Go game state', () => {
     debug(s)
 
     expect(isEmpty(s.ko)).toBe(true)
+  })
+
+  it('can flip stones', () => {
+    const s = rectangleSix()
+    s.flipStones(single(0, 0), s.external, false)
+    expect(s.player).toEqual(new Uint16Array([1, 0, 0]))
   })
 })

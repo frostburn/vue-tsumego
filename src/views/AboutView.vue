@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { State } from '../core/state'
-import { rectangle, stonesOr, stonesXor, clone, single, south } from '../core/bitboard'
+import { rectangle, stonesOr, stonesXor, clone, single, southPlus } from '../core/bitboard'
 import { passStyle } from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import PlayerIndicator from '../components/PlayerIndicator.vue'
@@ -13,16 +13,18 @@ straightThree.player = stonesXor(rectangle(4, 2), straightThree.logicalArea)
 straightThree.target = clone(straightThree.player)
 straightThree.opponent = stonesXor(rectangle(5, 3), rectangle(4, 2))
 straightThree.immortal = clone(straightThree.opponent)
+straightThree.trim()
 const straightThreePlay = straightThree.makeMove.bind(straightThree)
 
 const straightFour = reactive(new State())
 straightFour.visualArea = rectangle(9, 6)
-straightFour.external = south(south(rectangle(2, 1)))
+straightFour.external = southPlus(rectangle(2, 1), 2)
 straightFour.logicalArea = stonesOr(rectangle(4, 1), straightFour.external)
 straightFour.player = stonesXor(rectangle(5, 2), rectangle(4, 1))
 straightFour.target = clone(straightFour.player)
 straightFour.opponent = stonesXor(rectangle(6, 4), rectangle(5, 2))
 straightFour.immortal = stonesXor(straightFour.opponent, straightFour.external)
+straightFour.trim()
 const straightFourPlay = straightFour.makeMove.bind(straightFour)
 
 const bentFour = reactive(new State())
@@ -32,6 +34,7 @@ const eyespace = stonesOr(rectangle(3, 1), single(0, 1))
 bentFour.opponent = stonesXor(stonesOr(rectangle(4, 2), rectangle(2, 3)), eyespace)
 bentFour.whiteToPlay = true
 bentFour.koThreats = -1
+bentFour.trim()
 bentFour.makeMove(single(1, 0))
 bentFour.makeMove(single(0, 0))
 bentFour.makeMove(single(0, 1))
@@ -129,6 +132,7 @@ rectangleEight.opponent = stonesXor(rectangle(5, 3), rectangle(4, 2))
 rectangleEight.player = stonesXor(rectangle(6, 4), rectangle(5, 3))
 rectangleEight.target = clone(rectangleEight.opponent)
 rectangleEight.immortal = clone(rectangleEight.player)
+rectangleEight.trim()
 </script>
 
 <template>
