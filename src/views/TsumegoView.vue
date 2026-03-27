@@ -86,6 +86,8 @@ const myPassStyle = computed(() => {
   return passStyle(playerInfo.value)
 })
 
+const playerToMoveLabel = computed(() => (whiteToPlay.value ? 'White to play' : 'Black to play'))
+
 async function getInfo() {
   const json = await getSolutionInfo(props.collection, { state: stateJSON.value })
   info.value = json
@@ -279,7 +281,7 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
           </div>
         </section>
 
-        <section class="mode-card" aria-labelledby="tsumego-controls-heading">
+        <section class="mode-card controls-card" aria-labelledby="tsumego-controls-heading">
           <h2 id="tsumego-controls-heading">Play Actions</h2>
           <p class="section-help">Solve the problem by choosing local forcing and winning moves.</p>
           <div class="button-row">
@@ -298,17 +300,35 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
               class="action-button button-secondary undo"
               @click="doUndo"
               :disabled="!undos.length"
-            />
+            >
+              undo
+            </button>
+          </div>
+        </section>
+
+        <section class="mode-card session-card" aria-labelledby="tsumego-session-heading">
+          <h2 id="tsumego-session-heading">Session</h2>
+          <p class="section-help">Current turn information and board reset controls.</p>
+          <div class="session-row">
+            <span class="indicator-container" aria-hidden="true">
+              <PlayerIndicator :whiteToPlay="whiteToPlay" />
+            </span>
+            <p class="turn-label">{{ playerToMoveLabel }}</p>
+          </div>
+          <div class="button-row">
             <button class="action-button button-secondary" :disabled="busy" @click="init">
               reset
             </button>
           </div>
         </section>
 
-        <section class="mode-card" aria-labelledby="tsumego-status-heading">
+        <section class="mode-card status-card" aria-labelledby="tsumego-status-heading">
           <h2 id="tsumego-status-heading">Status</h2>
           <p class="section-help">Track the current result and threat context for this problem.</p>
-          <p class="status-line">Ko-threats: {{ koThreats }}</p>
+          <p class="ko-threats-line">
+            <span class="ko-threats-label">Ko-threats</span>
+            <span class="ko-threats-value">{{ koThreats }}</span>
+          </p>
           <p v-if="fail" class="status-line">Failed</p>
           <p v-else-if="success" class="status-line">Success</p>
           <p v-if="done" class="status-line">Done</p>
@@ -324,10 +344,28 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
   display: grid;
   gap: 0.6rem;
   grid-template-columns: 1fr;
+  grid-template-areas:
+    'board'
+    'actions'
+    'session'
+    'status';
 }
 
 .board-card {
   padding: 0.75rem;
+  grid-area: board;
+}
+
+.controls-card {
+  grid-area: actions;
+}
+
+.session-card {
+  grid-area: session;
+}
+
+.status-card {
+  grid-area: status;
 }
 
 .sister-tsumego {
@@ -347,6 +385,36 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
   display: inline-block;
   width: 3.9em;
 }
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.turn-label {
+  color: var(--color-label-text);
+  font-weight: 600;
+}
+
+.ko-threats-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.ko-threats-label {
+  color: var(--color-label-text);
+  font-weight: 600;
+}
+
+.ko-threats-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
 .status-line {
   margin: 0.3em 0 0;
 }
@@ -354,6 +422,10 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 @media (min-width: 62rem) {
   .tsumego-layout {
     grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
+    grid-template-areas:
+      'board actions'
+      'board session'
+      'board status';
     align-items: start;
   }
 }
