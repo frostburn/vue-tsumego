@@ -47,6 +47,8 @@ export type TsumegoResponse = {
 
 /**
  * Formats a move's low gain value for compact UI display.
+ * @param info Solver metadata for a candidate move.
+ * @returns Human-friendly gain string used in move labels.
  */
 export function formatGain(info: MoveInfo) {
   const gain = info.lowGain
@@ -61,6 +63,8 @@ export function formatGain(info: MoveInfo) {
 
 /**
  * Produces a color for rendering move quality using a perceptual HSL ramp.
+ * @param info Solver metadata for a candidate move.
+ * @returns CSS color string used to paint move quality.
  */
 export function fillGain(info: MoveInfo) {
   const x = -info.lowGain
@@ -75,6 +79,8 @@ export function fillGain(info: MoveInfo) {
 
 /**
  * Computes style overrides for rendering the pass move in the move list.
+ * @param info Optional solution information for the current position.
+ * @returns CSS style object for the pass indicator.
  */
 export function passStyle(info: SolutionInfo | undefined) {
   if (info === undefined) {
@@ -100,6 +106,9 @@ export const API_URL = new URL(import.meta.env.VITE_API_URL, window.location.ori
 
 /**
  * Fetches JSON and throws on non-2xx responses.
+ * @param input Request URL or request descriptor.
+ * @param init Optional fetch init object.
+ * @returns Parsed JSON response body typed as `T`.
  */
 export async function fetchJson<T>(input: URL | RequestInfo, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init)
@@ -111,6 +120,9 @@ export async function fetchJson<T>(input: URL | RequestInfo, init?: RequestInit)
 
 /**
  * Requests solution metadata for a collection/state pair.
+ * @param collection Collection identifier used by the backend API.
+ * @param state State payload or full state object to serialize.
+ * @returns Solver response including move scores and optional dead stones.
  */
 export async function getSolutionInfo(collection: string, state: State | { state: StateJSON }) {
   if (state instanceof State) {
@@ -127,6 +139,9 @@ export async function getSolutionInfo(collection: string, state: State | { state
 
 /**
  * Marks dead stones on a state using solver output.
+ * @param collection Collection identifier used by the backend API.
+ * @param state Mutable state to update with server-provided dead stones.
+ * @returns Resolves when dead-stone metadata has been applied.
  */
 export async function markDeadStones(collection: string, state: State) {
   const json = await getSolutionInfo(collection, state)
@@ -140,6 +155,8 @@ const URL_SAFE_CHARS64 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQR
 
 /**
  * Encodes a non-negative integer using a URL-safe base64 alphabet.
+ * @param n Non-negative integer to encode.
+ * @returns URL-safe compact string representation.
  */
 export function encode64(n: number): string {
   if (n < 0 || !Number.isInteger(n)) {
@@ -155,6 +172,8 @@ export function encode64(n: number): string {
 
 /**
  * Decodes a URL-safe base64 integer string produced by {@link encode64}.
+ * @param s URL-safe encoded integer string.
+ * @returns Decoded non-negative integer.
  */
 export function decode64(s: string): number {
   let result = 0
@@ -166,6 +185,9 @@ export function decode64(s: string): number {
 
 /**
  * Decodes a query key into a full board state relative to a root state.
+ * @param root Root puzzle state used as encoding context.
+ * @param s Encoded query value.
+ * @returns Decoded state instance.
  */
 export function decodeQuery(root: State, s: string): State {
   return decode(root, decode64(s))
@@ -173,6 +195,9 @@ export function decodeQuery(root: State, s: string): State {
 
 /**
  * Encodes a board state into a compact URL query key relative to a root state.
+ * @param root Root puzzle state used as encoding context.
+ * @param state Child state to encode.
+ * @returns URL-safe encoded query string.
  */
 export function encodeQuery(root: State, state: State): string {
   return encode64(encode(root, state))

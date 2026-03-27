@@ -184,6 +184,7 @@ export class State {
 
   /**
    * Construct a new empty 16x16 goban, a 16xheight goban or clone an existing state
+   * @param state Optional source state or requested board height.
    */
   constructor(state?: State | number) {
     if (state === undefined || typeof state === 'number') {
@@ -220,6 +221,8 @@ export class State {
 
   /**
    * Update game state from serialized data.
+   * @param obj Serialized state payload.
+   * @returns Nothing.
    */
   assignFromJSON(obj: StateJSON) {
     this.visualArea = arrayToStones(obj.visualArea)
@@ -243,6 +246,7 @@ export class State {
 
   /**
    * Serialize game state.
+   * @returns Serializable state payload.
    */
   toJSON() {
     return {
@@ -264,6 +268,7 @@ export class State {
 
   /**
    * Current occupied board width implied by `visualArea`.
+   * @returns Width required to contain the board shape.
    */
   get width(): number {
     return widthOf(this.visualArea)
@@ -271,6 +276,7 @@ export class State {
 
   /**
    * Current occupied board height implied by `visualArea`.
+   * @returns Height required to contain the board shape.
    */
   get height(): number {
     return heightOf(this.visualArea)
@@ -278,6 +284,7 @@ export class State {
 
   /**
    * Trims all bitboards to the state's current logical height.
+   * @returns The same state for chaining.
    */
   trim(): this {
     const height = this.height
@@ -297,6 +304,7 @@ export class State {
 
   /**
    * Returns the canonical pass move bitboard for this state.
+   * @returns Empty move bitboard representing pass.
    */
   passMove(): Stones {
     return emptyStones(this.height)
@@ -304,6 +312,7 @@ export class State {
 
   /**
    * An array of strings suitable for rendering the goban in the console.
+   * @returns ANSI-rendered board rows.
    */
   displayLines(): string[] {
     const black = this.whiteToPlay ? this.opponent : this.player
@@ -408,6 +417,7 @@ export class State {
 
   /**
    * Logs an ANSI-rendered board snapshot to the console.
+   * @returns Nothing.
    */
   log() {
     console.log(this.displayLines().join('\n'))
@@ -415,8 +425,16 @@ export class State {
 
   /**
    * Plays a move by bitboard or coordinates.
+   * @param move Bitboard containing one move point.
+   * @returns Result classification of the attempted move.
    */
   makeMove(move: Stones): MoveResult
+  /**
+   * Plays a move by coordinates.
+   * @param x X coordinate.
+   * @param y Y coordinate.
+   * @returns Result classification of the attempted move.
+   */
   makeMove(x: number, y: number): MoveResult
   makeMove(moveOrX: Stones | number, y?: number): MoveResult {
     const height = this.height
@@ -577,6 +595,7 @@ export class State {
 
   /**
    * Swaps `player` and `opponent`, flipping perspective state fields.
+   * @returns Nothing.
    */
   swapPlayers() {
     ;[this.player, this.opponent] = [this.opponent, this.player]
@@ -588,6 +607,10 @@ export class State {
 
   /**
    * Re-colors selected stones and updates dependent target/immortal/external masks.
+   * @param stones Stones to flip ownership/state for.
+   * @param external External-mask hints for converted stones.
+   * @param flipWhite Whether the provided mask is white-oriented.
+   * @returns Nothing.
    */
   flipStones(stones: Stones, external: Stones, flipWhite: boolean) {
     const height = this.height
@@ -619,6 +642,7 @@ export class State {
 
   /**
    * Returns coordinates available for flipping to black.
+   * @returns Coordinates that can be toggled into black ownership.
    */
   availableBlackFlips() {
     const white = this.whiteToPlay ? this.player : this.opponent
@@ -627,6 +651,7 @@ export class State {
 
   /**
    * Returns coordinates available for flipping to white.
+   * @returns Coordinates that can be toggled into white ownership.
    */
   availableWhiteFlips() {
     const black = this.whiteToPlay ? this.opponent : this.player
@@ -635,6 +660,7 @@ export class State {
 
   /**
    * Converts internal bitboards into a flat, render-ready grid model.
+   * @returns Flattened grid cells for UI rendering.
    */
   toGrid(): GridItem[] {
     const width = this.width
@@ -712,6 +738,7 @@ export class State {
 
   /**
    * Computes area-like control score without removing dead stones.
+   * @returns Liberty-based score from current player's perspective.
    */
   chineseLibertyScore(): number {
     const empty = stonesOr(
@@ -731,6 +758,7 @@ export class State {
 
   /**
    * Computes area score including dead/external adjustments.
+   * @returns Area score from current player's perspective.
    */
   areaScore(): number {
     const height = this.height
@@ -750,6 +778,7 @@ export class State {
 
   /**
    * Computes score in Q7 fixed-point, including button and ko-threat bonuses.
+   * @returns Score in Q7 fixed-point format.
    */
   scoreQ7(): number {
     return (
@@ -758,6 +787,7 @@ export class State {
   }
   /**
    * Computes score as floating-point points.
+   * @returns Score in points.
    */
   score(): number {
     return this.scoreQ7() / SCORE_Q7_SCALE
@@ -765,12 +795,14 @@ export class State {
 
   /**
    * Computes Q7 score for terminal target-loss outcomes.
+   * @returns Terminal target-loss score in Q7 fixed-point.
    */
   targetLostScoreQ7(): number {
     return this.button * BUTTON_Q7 + this.koThreats * KO_THREAT_Q7 - TARGET_CAPTURED_SCORE_Q7
   }
   /**
    * Computes floating-point score for terminal target-loss outcomes.
+   * @returns Terminal target-loss score in points.
    */
   targetLostScore(): number {
     return this.targetLostScoreQ7() / SCORE_Q7_SCALE
@@ -778,6 +810,9 @@ export class State {
 
   /**
    * Expands the visual board up to the requested dimensions.
+   * @param width Minimum width to stretch to.
+   * @param height Minimum height to stretch to.
+   * @returns Nothing.
    */
   stretchTo(width: number, height: number) {
     if ((width || height) && isEmpty(this.visualArea)) {
@@ -800,6 +835,8 @@ export class State {
 
   /**
    * Tests deep equality across all serialized gameplay fields.
+   * @param other State to compare with.
+   * @returns `true` when all gameplay fields are equal.
    */
   equals(other: State): boolean {
     return (

@@ -48,6 +48,8 @@ const MAX_VALUE = 32767
 
 /**
  * Returns the total number of encoded states reachable under root constraints.
+ * @param root Root state defining move space and metadata ranges.
+ * @returns Total key count for encoded states.
  */
 export function keyspaceSize(root: State): number {
   const numMoves = stonesCount(root.logicalArea)
@@ -79,6 +81,10 @@ export function keyspaceSize(root: State): number {
 
 /**
  * Encodes a state (relative to `root`) into an integer key.
+ * @param root Root state defining encoding space.
+ * @param state Child state to encode.
+ * @param moves Optional precomputed move list.
+ * @returns Compact numeric key.
  */
 export function encode(root: State, state: State, moves?: Stones[]): number {
   if (moves === undefined) {
@@ -125,6 +131,10 @@ export function encode(root: State, state: State, moves?: Stones[]): number {
 
 /**
  * Decodes an integer key back into a state relative to `root`.
+ * @param root Root state defining encoding space.
+ * @param key Encoded numeric key.
+ * @param moves Optional precomputed move list.
+ * @returns Decoded state.
  */
 export function decode(root: State, key: number, moves?: Stones[]): State {
   if (moves === undefined) {
@@ -253,6 +263,8 @@ export class Graph {
 
   /**
    * Returns low/high score bounds for the given state.
+   * @param state State to evaluate.
+   * @returns Tuple of low/high scores.
    */
   getValueRange(state: State): [number, number] {
     const key = encode(this.root, state, this.moves)
@@ -261,6 +273,8 @@ export class Graph {
 
   /**
    * Computes move-by-move solution metadata for the given state.
+   * @param state State to analyze.
+   * @returns Move information bundle for UI rendering.
    */
   getInfo(state: State): SolutionInfo {
     const [low, high] = this.getValueRange(state)
