@@ -235,7 +235,7 @@ onMounted(init)
         <div class="explore-sidebar">
           <section class="explore-card" aria-labelledby="play-actions-heading">
             <h2 id="play-actions-heading">Play Actions</h2>
-            <p class="section-help">Core move controls for stepping through the position.</p>
+            <p class="section-help">Core controls for stepping through the position.</p>
             <div class="button-row">
               <button
                 class="action-button button-primary"
@@ -264,7 +264,7 @@ onMounted(init)
 
           <section class="explore-card" aria-labelledby="position-params-heading">
             <h2 id="position-params-heading">Position Params</h2>
-            <p class="section-help">Fine-tune ko-threat counts and button state for this setup.</p>
+            <p class="section-help">Tune ko-threat count and button state for this setup.</p>
             <div class="param-grid">
               <div class="param-field">
                 <label for="ko-threats">Ko-threats</label>
@@ -334,7 +334,7 @@ onMounted(init)
 
           <section class="explore-card" aria-labelledby="session-heading">
             <h2 id="session-heading">Session</h2>
-            <p class="section-help">Reset the board or copy links for sharing your current work.</p>
+            <p class="section-help">Reset the board or copy links to share your work.</p>
             <div class="button-row">
               <button class="action-button button-secondary" @click="init" :disabled="busy">reset</button>
               <button class="action-button button-secondary" @click="sharePosition('explore')" :disabled="busy">
@@ -361,8 +361,8 @@ onMounted(init)
 
 <style scoped>
 .explore-layout {
-  --explore-gap: 0.75rem;
-  --explore-card-padding: 0.95rem;
+  --explore-gap: 0.6rem;
+  --explore-card-padding: 0.75rem;
   --explore-card-radius: 0.6rem;
   display: grid;
   gap: var(--explore-gap);
@@ -388,19 +388,20 @@ onMounted(init)
 }
 
 .explore-card h2 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   margin: 0;
 }
 
 .section-help {
-  margin: 0.3rem 0 0.6rem;
+  margin: 0.22rem 0 0.5rem;
   color: var(--color-text);
   opacity: 0.85;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .mode-label {
-  margin: 0.65rem 0 0;
+  margin: 0.45rem 0 0;
   font-weight: 600;
 }
 
@@ -411,7 +412,7 @@ onMounted(init)
 .button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.4rem;
 }
 
 .action-button,
@@ -423,9 +424,9 @@ onMounted(init)
 }
 
 .action-button {
-  min-width: 7.5rem;
-  min-height: 2.6rem;
-  padding: 0.45rem 0.75rem;
+  min-width: 6.75rem;
+  min-height: 2.3rem;
+  padding: 0.38rem 0.65rem;
 }
 
 .button-primary {
@@ -443,9 +444,9 @@ onMounted(init)
 
 .undo.action-button {
   color: var(--color-text);
-  min-width: 2.8rem;
-  width: 2.8rem;
-  min-height: 2.6rem;
+  min-width: 2.3rem;
+  width: 2.3rem;
+  min-height: 2.3rem;
   padding: 0;
 }
 
@@ -456,7 +457,7 @@ onMounted(init)
 
 .undo.action-button::after {
   content: '\0238C';
-  font-size: 1.7rem;
+  font-size: 1.35rem;
   line-height: 1;
 }
 
@@ -467,29 +468,29 @@ onMounted(init)
 
 .param-grid {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .param-field {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .stepper {
   display: grid;
   grid-template-columns: minmax(4.5rem, 8rem) auto auto;
-  gap: 0.4rem;
+  gap: 0.32rem;
   align-items: center;
 }
 
 .stepper input {
-  min-height: 2.4rem;
-  padding: 0.2rem 0.45rem;
+  min-height: 2.1rem;
+  padding: 0.18rem 0.4rem;
 }
 
 .stepper-button {
   min-width: 2rem;
-  min-height: 2.4rem;
+  min-height: 2.1rem;
 }
 
 .shared-url {
@@ -508,13 +509,40 @@ onMounted(init)
 
 @media (min-width: 62rem) {
   .explore-layout {
-    grid-template-columns: minmax(22rem, 2fr) minmax(20rem, 1fr);
+    grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
     gap: 1rem;
   }
+}
 
-  .explore-sidebar {
-    position: sticky;
-    top: 0.8rem;
+@media (prefers-color-scheme: dark) {
+  .explore-card {
+    background: #191d26;
+    border-color: #414c61;
+  }
+
+  .section-help {
+    color: #cfd6e1;
+    opacity: 1;
+  }
+
+  .mode-label {
+    color: #f0f4ff;
+  }
+
+  .button-secondary {
+    background: #202633;
+    border-color: #4f5e79;
+    color: #f3f7ff;
+  }
+
+  .button-tertiary {
+    background: #161b24;
+    border-color: #465067;
+    color: #d8e2f5;
+  }
+
+  :where(button, input, [tabindex]):focus-visible {
+    outline-color: #8fc0ff;
   }
 }
 </style>
