@@ -15,6 +15,9 @@ import {
 } from './bitboard'
 import { State, MoveResult, SCORE_Q7_SCALE } from './state'
 
+/**
+ * Evaluation metadata for a candidate move.
+ */
 export type MoveInfo = {
   // Coordinates of the move or -1, -1 for a pass
   x: number
@@ -32,6 +35,9 @@ export type MoveInfo = {
   forcing: boolean
 }
 
+/**
+ * Solver result bundle for a position.
+ */
 export type SolutionInfo = {
   // Moves that are available.
   moves: MoveInfo[]
@@ -40,6 +46,9 @@ export type SolutionInfo = {
 const MIN_VALUE = -32767 // Not -32768 to support unary minus
 const MAX_VALUE = 32767
 
+/**
+ * Returns the total number of encoded states reachable under root constraints.
+ */
 export function keyspaceSize(root: State): number {
   const numMoves = stonesCount(root.logicalArea)
   let result = 1
@@ -68,7 +77,9 @@ export function keyspaceSize(root: State): number {
   return result
 }
 
-// Encode root's child state into a number
+/**
+ * Encodes a state (relative to `root`) into an integer key.
+ */
 export function encode(root: State, state: State, moves?: Stones[]): number {
   if (moves === undefined) {
     moves = dots(root.logicalArea)
@@ -112,7 +123,9 @@ export function encode(root: State, state: State, moves?: Stones[]): number {
   return result
 }
 
-// Decode a number into a game state
+/**
+ * Decodes an integer key back into a state relative to `root`.
+ */
 export function decode(root: State, key: number, moves?: Stones[]): State {
   if (moves === undefined) {
     moves = dots(root.logicalArea)
@@ -178,6 +191,9 @@ export function decode(root: State, key: number, moves?: Stones[]): State {
   return result
 }
 
+/**
+ * Value-iteration graph over encoded puzzle states.
+ */
 export class Graph {
   root: State
   moves: Stones[]
@@ -196,7 +212,10 @@ export class Graph {
     this.highs.fill(MAX_VALUE)
   }
 
-  // Returns `false` when done
+  /**
+   * Performs one dynamic-programming relaxation pass.
+   * @returns `false` when no values changed.
+   */
   iterate(): boolean {
     let didChange = false
     for (let key = 0; key < this.lows.length; ++key) {
@@ -232,11 +251,17 @@ export class Graph {
     return didChange
   }
 
+  /**
+   * Returns low/high score bounds for the given state.
+   */
   getValueRange(state: State): [number, number] {
     const key = encode(this.root, state, this.moves)
     return [this.lows[key]! / SCORE_Q7_SCALE, this.highs[key]! / SCORE_Q7_SCALE]
   }
 
+  /**
+   * Computes move-by-move solution metadata for the given state.
+   */
   getInfo(state: State): SolutionInfo {
     const [low, high] = this.getValueRange(state)
 

@@ -35,7 +35,9 @@ import {
   toHeight,
 } from './bitboard'
 
-// Result of making a move
+/**
+ * Outcome classification for attempting to apply a move.
+ */
 export enum MoveResult {
   // Non-moves
   Illegal,
@@ -56,14 +58,14 @@ export enum MoveResult {
   KoThreatAndRetake,
 }
 
-// Types of stones on the goban
-// Normal stones have no special properties
-// Capturing target stones ends the game
-// Immortal stones cannot be captured
-// Intangible stones are for aesthetics but please prefer marking outside stones as immortal instead
+/**
+ * Semantic categories used for stones on the rendered goban.
+ */
 export type StoneStatus = 'normal' | 'target' | 'immortal' | 'intangible' | 'dead'
 
-// A playing piece on the goban
+/**
+ * Render-ready description of a stone on the board grid.
+ */
 export type GridStone = {
   type: 'black' | 'white'
   status: StoneStatus
@@ -72,7 +74,9 @@ export type GridStone = {
   y: number
 }
 
-// Empty space on the goban
+/**
+ * Render-ready description of an empty or special grid point.
+ */
 export type GridSpace = {
   type: 'ko' | 'external' | 'empty' | 'outside' | 'void'
   playable: boolean
@@ -81,9 +85,14 @@ export type GridSpace = {
   y: number
 }
 
+/**
+ * Render-ready union of stone and non-stone grid cells.
+ */
 export type GridItem = GridStone | GridSpace
 
-// State serialization format
+/**
+ * JSON wire format for a {@link State}.
+ */
 export type StateJSON = {
   visualArea: number[]
   logicalArea: number[]
@@ -99,18 +108,29 @@ export type StateJSON = {
   whiteToPlay: boolean
 }
 
-// Conversion between JS numbers and 16-bit fixed-point
+/**
+ * Scale factor used for Q7 fixed-point score representation.
+ */
 export const SCORE_Q7_SCALE = 128
 
+/**
+ * Score awarded when the target is captured.
+ */
 export const TARGET_CAPTURED_SCORE = 200
 const TARGET_CAPTURED_SCORE_Q7 = TARGET_CAPTURED_SCORE * SCORE_Q7_SCALE
 
 // Taking the button is worth a quarter point
 const BUTTON_Q7 = SCORE_Q7_SCALE / 4
+/**
+ * Area-score bonus for owning the button.
+ */
 export const BUTTON_BONUS = BUTTON_Q7 / SCORE_Q7_SCALE
 
 // Saving up abstract "external" ko-threats is incentivized
 const KO_THREAT_Q7 = SCORE_Q7_SCALE / 32
+/**
+ * Area-score bonus applied per ko threat.
+ */
 export const KO_THREAT_BONUS = KO_THREAT_Q7 / SCORE_Q7_SCALE
 
 /**
@@ -242,14 +262,23 @@ export class State {
     // Dead stones intentionally left out
   }
 
+  /**
+   * Current occupied board width implied by `visualArea`.
+   */
   get width(): number {
     return widthOf(this.visualArea)
   }
 
+  /**
+   * Current occupied board height implied by `visualArea`.
+   */
   get height(): number {
     return heightOf(this.visualArea)
   }
 
+  /**
+   * Trims all bitboards to the state's current logical height.
+   */
   trim(): this {
     const height = this.height
 
@@ -266,6 +295,9 @@ export class State {
     return this
   }
 
+  /**
+   * Returns the canonical pass move bitboard for this state.
+   */
   passMove(): Stones {
     return emptyStones(this.height)
   }
@@ -374,11 +406,16 @@ export class State {
     return result
   }
 
+  /**
+   * Logs an ANSI-rendered board snapshot to the console.
+   */
   log() {
     console.log(this.displayLines().join('\n'))
   }
 
-  // Play the single stone indicated by the bitboard
+  /**
+   * Plays a move by bitboard or coordinates.
+   */
   makeMove(move: Stones): MoveResult
   makeMove(x: number, y: number): MoveResult
   makeMove(moveOrX: Stones | number, y?: number): MoveResult {
@@ -538,6 +575,9 @@ export class State {
     return result
   }
 
+  /**
+   * Swaps `player` and `opponent`, flipping perspective state fields.
+   */
   swapPlayers() {
     ;[this.player, this.opponent] = [this.opponent, this.player]
     clear(this.ko)
@@ -546,6 +586,9 @@ export class State {
     this.whiteToPlay = !this.whiteToPlay
   }
 
+  /**
+   * Re-colors selected stones and updates dependent target/immortal/external masks.
+   */
   flipStones(stones: Stones, external: Stones, flipWhite: boolean) {
     const height = this.height
     stones = toHeight(stones, height)
@@ -574,16 +617,25 @@ export class State {
     subtract(this.logicalArea, this.immortal, this.target)
   }
 
+  /**
+   * Returns coordinates available for flipping to black.
+   */
   availableBlackFlips() {
     const white = this.whiteToPlay ? this.player : this.opponent
     return gridOf(stonesXor(this.logicalArea, stonesAnd(this.external, white)))
   }
 
+  /**
+   * Returns coordinates available for flipping to white.
+   */
   availableWhiteFlips() {
     const black = this.whiteToPlay ? this.opponent : this.player
     return gridOf(stonesXor(this.logicalArea, stonesAnd(this.external, black)))
   }
 
+  /**
+   * Converts internal bitboards into a flat, render-ready grid model.
+   */
   toGrid(): GridItem[] {
     const width = this.width
     const height = this.height
@@ -658,7 +710,9 @@ export class State {
     return result
   }
 
-  // Area score but only adjacent area is counted without removing dead stones
+  /**
+   * Computes area-like control score without removing dead stones.
+   */
   chineseLibertyScore(): number {
     const empty = stonesOr(
       stonesAnd(this.visualArea, invertInPlace(stonesOr(this.player, this.opponent))),
@@ -675,7 +729,9 @@ export class State {
     return stonesCount(playerControlled) - stonesCount(opponentControlled)
   }
 
-  // Area score
+  /**
+   * Computes area score including dead/external adjustments.
+   */
   areaScore(): number {
     const height = this.height
     const empty = stonesAnd(this.visualArea, invertInPlace(stonesOr(this.player, this.opponent)))
@@ -692,24 +748,37 @@ export class State {
     return stonesCount(playerControlled) - stonesCount(opponentControlled)
   }
 
-  // Area score scaled to 16-point fixed-point including bonus for button and remaining ko-threats
+  /**
+   * Computes score in Q7 fixed-point, including button and ko-threat bonuses.
+   */
   scoreQ7(): number {
     return (
       this.areaScore() * SCORE_Q7_SCALE + this.button * BUTTON_Q7 + this.koThreats * KO_THREAT_Q7
     )
   }
+  /**
+   * Computes score as floating-point points.
+   */
   score(): number {
     return this.scoreQ7() / SCORE_Q7_SCALE
   }
 
-  // Bonus for button and remaining ko-threats with a penalty for losing your target stones
+  /**
+   * Computes Q7 score for terminal target-loss outcomes.
+   */
   targetLostScoreQ7(): number {
     return this.button * BUTTON_Q7 + this.koThreats * KO_THREAT_Q7 - TARGET_CAPTURED_SCORE_Q7
   }
+  /**
+   * Computes floating-point score for terminal target-loss outcomes.
+   */
   targetLostScore(): number {
     return this.targetLostScoreQ7() / SCORE_Q7_SCALE
   }
 
+  /**
+   * Expands the visual board up to the requested dimensions.
+   */
   stretchTo(width: number, height: number) {
     if ((width || height) && isEmpty(this.visualArea)) {
       this.visualArea = single(0, 0, 1)
@@ -729,6 +798,9 @@ export class State {
     }
   }
 
+  /**
+   * Tests deep equality across all serialized gameplay fields.
+   */
   equals(other: State): boolean {
     return (
       equals(this.visualArea, other.visualArea) &&
