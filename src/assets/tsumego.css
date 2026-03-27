@@ -1,8 +1,24 @@
+.tsumego-layout {
+  --tsumego-gap: 0.6rem;
+  --tsumego-card-padding: 0.75rem;
+  display: grid;
+  gap: var(--tsumego-gap);
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 62rem) {
+  .tsumego-layout {
+    grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
+    gap: 1rem;
+  }
+}
+
 .goban-container {
   max-width: 46em;
 }
 
-.mode-card {
+.card {
   background: var(--color-card-background);
   border: 1px solid var(--color-border);
   border-radius: 0.6rem;
@@ -10,10 +26,19 @@
   margin: 0;
 }
 
-.mode-card h2 {
+.card h2 {
   color: var(--color-label-text);
   font-size: 0.95em;
   margin: 0;
+}
+
+.board-card {
+  padding: var(--tsumego-card-padding);
+}
+
+.sidebar {
+  display: grid;
+  gap: var(--tsumego-gap);
 }
 
 .section-help {
@@ -63,7 +88,7 @@ button {
   height: 3em;
 }
 button.undo:disabled {
-  color: var(--color-border);
+  color: var(--color-button-border);
   background: var(--color-background-soft);
 }
 button.undo::after {

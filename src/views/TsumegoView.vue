@@ -270,7 +270,7 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
     <p v-if="!data.state">Loading...</p>
     <template v-else>
       <div class="tsumego-layout">
-        <section class="mode-card board-card" aria-label="Board position">
+        <section class="card board-card" aria-label="Board position">
           <div class="goban-container">
             <TheGoban
               :state="gameState"
@@ -281,58 +281,54 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
           </div>
         </section>
 
-        <section class="mode-card controls-card" aria-labelledby="tsumego-controls-heading">
-          <h2 id="tsumego-controls-heading">Play Actions</h2>
-          <p class="section-help">Solve the problem by choosing local forcing and winning moves.</p>
-          <div class="button-row">
-            <button
-              class="action-button button-primary"
-              @click="play(-1, -1)"
-              :disabled="busy || done"
-              :style="myPassStyle"
-            >
-              pass {{ passGain }}
-            </button>
-            <span class="indicator-container">
-              <PlayerIndicator :whiteToPlay="whiteToPlay" />
-            </span>
-            <button
-              class="action-button button-secondary undo"
-              @click="doUndo"
-              :disabled="!undos.length"
-            >
-              undo
-            </button>
-          </div>
-        </section>
+        <div class="sidebar">
+          <section class="card" aria-labelledby="tsumego-controls-heading">
+            <h2 id="tsumego-controls-heading">Play Actions</h2>
+            <p class="section-help">Solve the problem by choosing local winning moves.</p>
+            <div class="button-row">
+              <button
+                class="action-button button-primary"
+                @click="play(-1, -1)"
+                :disabled="busy || done"
+                :style="myPassStyle"
+              >
+                pass {{ passGain }}
+              </button>
+              <button
+                class="action-button button-secondary undo"
+                @click="doUndo"
+                :disabled="!undos.length"
+              >
+                undo
+              </button>
+            </div>
+          </section>
 
-        <section class="mode-card session-card" aria-labelledby="tsumego-session-heading">
-          <h2 id="tsumego-session-heading">Session</h2>
-          <p class="section-help">Current turn information and board reset controls.</p>
-          <div class="session-row">
-            <span class="indicator-container" aria-hidden="true">
-              <PlayerIndicator :whiteToPlay="whiteToPlay" />
-            </span>
-            <p class="turn-label">{{ playerToMoveLabel }}</p>
-          </div>
-          <div class="button-row">
-            <button class="action-button button-secondary" :disabled="busy" @click="init">
-              reset
-            </button>
-          </div>
-        </section>
+          <section class="card" aria-labelledby="tsumego-session-heading">
+            <h2 id="tsumego-session-heading">Session</h2>
+            <p class="section-help">Color to play and threat context for this problem.</p>
+            <div class="session-row">
+              <span class="indicator-container" aria-hidden="true">
+                <PlayerIndicator :whiteToPlay="whiteToPlay" />
+              </span>
+              <p class="turn-label">{{ playerToMoveLabel }}</p>
+            </div>
+            <p class="ko-threats-line">Ko-threats: {{ koThreats }}</p>
+          </section>
 
-        <section class="mode-card status-card" aria-labelledby="tsumego-status-heading">
-          <h2 id="tsumego-status-heading">Status</h2>
-          <p class="section-help">Track the current result and threat context for this problem.</p>
-          <p class="ko-threats-line">
-            <span class="ko-threats-label">Ko-threats</span>
-            <span class="ko-threats-value">{{ koThreats }}</span>
-          </p>
-          <p v-if="fail" class="status-line">Failed</p>
-          <p v-else-if="success" class="status-line">Success</p>
-          <p v-if="done" class="status-line">Done</p>
-        </section>
+          <section class="card" aria-labelledby="tsumego-status-heading">
+            <h2 id="tsumego-status-heading">Status</h2>
+            <p class="section-help">Track the current result and board reset controls.</p>
+            <p v-if="fail" class="status-line">Failed</p>
+            <p v-else-if="success" class="status-line">Success</p>
+            <p v-if="done" class="status-line">Done</p>
+            <div class="button-row">
+              <button class="action-button button-secondary" :disabled="busy" @click="init">
+                reset
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
     </template>
     <h2 v-if="error">{{ error.message }}</h2>
@@ -340,34 +336,6 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 </template>
 
 <style scoped>
-.tsumego-layout {
-  display: grid;
-  gap: 0.6rem;
-  grid-template-columns: 1fr;
-  grid-template-areas:
-    'board'
-    'actions'
-    'session'
-    'status';
-}
-
-.board-card {
-  padding: 0.75rem;
-  grid-area: board;
-}
-
-.controls-card {
-  grid-area: actions;
-}
-
-.session-card {
-  grid-area: session;
-}
-
-.status-card {
-  grid-area: status;
-}
-
 .sister-tsumego {
   font-size: 2.5em;
   font-weight: bold;
@@ -393,40 +361,17 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 }
 
 .turn-label {
+  margin-left: 0.5em;
   color: var(--color-label-text);
   font-weight: 600;
 }
 
 .ko-threats-line {
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  margin-top: 0.2rem;
-}
-
-.ko-threats-label {
-  color: var(--color-label-text);
+  font-size: 1.2em;
   font-weight: 600;
-}
-
-.ko-threats-value {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--color-heading);
 }
 
 .status-line {
   margin: 0.3em 0 0;
-}
-
-@media (min-width: 62rem) {
-  .tsumego-layout {
-    grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
-    grid-template-areas:
-      'board actions'
-      'board session'
-      'board status';
-    align-items: start;
-  }
 }
 </style>
