@@ -58,6 +58,12 @@ export enum MoveResult {
   KoThreatAndRetake,
 }
 
+// Types of stones on the goban
+// Normal stones have no special properties
+// Capturing target stones ends the game
+// Immortal stones cannot be captured
+// Intangible stones are for aesthetics but please prefer marking outside stones as immortal instead
+
 /**
  * Semantic categories used for stones on the rendered goban.
  */
