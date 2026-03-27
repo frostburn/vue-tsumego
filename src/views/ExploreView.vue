@@ -177,8 +177,9 @@ function init() {
         json.state = state.toJSON()
         gameState.assignFromJSON(json.state)
       } else {
-        // The root is unstretched but it shouldn't affect getSolutionInfo()
-        json.state = json.root
+        // Default to zero ko-threats
+        gameState.koThreats = 0
+        json.state = gameState.toJSON()
       }
       data.value = json
       return json
