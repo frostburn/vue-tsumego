@@ -1,15 +1,23 @@
-// Stones of a single color are represented as a bitboard consisting of (typically) 16 unsigned integers for rows
-// The width of the goban is fixed at 16
+/**
+ * Stones of a single color represented as row-wise bitmasks.
+ */
 export type Stones = Uint16Array
 
-// Coordinates for a single stone or -1, -1 for a pass
+/**
+ * Coordinates for a single stone (`-1, -1` represents pass).
+ */
 export type Coords = {
   x: number
   y: number
 }
 
-// Bitboard constants
+/**
+ * Fixed internal bitboard width.
+ */
 export const WIDTH = 16
+/**
+ * Default bitboard height.
+ */
 export const HEIGHT = 16 // Not a hard limit, arrays may be trimmed for efficiency
 
 // Note: Bitboard semantics are mirrored from numeric rendering
@@ -17,6 +25,7 @@ const EAST_STONE_32 = 0b10000000000000000000000000000000
 
 /**
  * Obtain an empty bitboard stack of stones.
+ * @param height Height of the bitboard array.
  * @returns An empty goban.
  */
 export function emptyStones(height = HEIGHT): Stones {
@@ -25,6 +34,7 @@ export function emptyStones(height = HEIGHT): Stones {
 
 /**
  * Obtain a random collection of stones.
+ * @param height Height of the bitboard array.
  * @returns A gobanful with 50% chance of air or stones.
  */
 export function randomStones(height = HEIGHT): Stones {
@@ -46,6 +56,8 @@ export function clone(stones: Stones): Stones {
 
 /**
  * Produce lines of ASCII from the stone collection using @ for stones and . for empty space.
+ * @param stones Stones to render.
+ * @returns Array of printable board lines.
  */
 export function stoneDisplayLines(stones: Stones): string[] {
   const result = ['┌─' + '──'.repeat(WIDTH) + '┐']
@@ -67,6 +79,8 @@ export function stoneDisplayLines(stones: Stones): string[] {
 
 /**
  * Render stones of a single color in ASCII using @ for stones and . for empty space.
+ * @param stones Stones to log.
+ * @returns Nothing.
  */
 export function logStones(stones: Stones): void {
   console.log(stoneDisplayLines(stones).join('\n'))
@@ -116,12 +130,21 @@ export function isNonEmpty(stones: Stones) {
   return false
 }
 
-// Clear a collection of stones in-place
+/**
+ * Clears a stone collection in-place.
+ * @param stones Stones to mutate.
+ * @returns Nothing.
+ */
 export function clear(stones: Stones) {
   stones.fill(0)
 }
 
-// Test if two collections of stones are the same if padded with zeros
+/**
+ * Tests whether two collections are equal when trailing zero rows are ignored.
+ * @param a First stone collection.
+ * @param b Second stone collection.
+ * @returns `true` when both collections represent the same occupied points.
+ */
 export function equals(a: Stones, b: Stones) {
   if (a.length > b.length) {
     ;[a, b] = [b, a]
@@ -139,7 +162,12 @@ export function equals(a: Stones, b: Stones) {
   return true
 }
 
-// Test if two collections of stones share members
+/**
+ * Tests whether two collections share at least one occupied intersection.
+ * @param a First stone collection.
+ * @param b Second stone collection.
+ * @returns `true` when both collections overlap.
+ */
 export function overlaps(a: Stones, b: Stones) {
   for (let i = Math.min(a.length, b.length) - 1; i >= 0; --i) {
     if (a[i]! & b[i]!) {
@@ -247,6 +275,11 @@ export function popcount(x: number) {
   return x & 0x7f
 }
 
+/**
+ * Counts stones in a collection.
+ * @param stones Stones to count.
+ * @returns Number of occupied intersections.
+ */
 export function stonesCount(stones: Stones) {
   return stones.map(popcount16).reduce((a, b) => a + b, 0)
 }
@@ -255,6 +288,7 @@ export function stonesCount(stones: Stones) {
  * Perform a flood-fill of the source bitboard into the target without masking. Modifies source in-place.
  * @param source Small bitboard pattern to expand.
  * @param target Bitboard pattern to constrain the expansion.
+ * @returns Nothing.
  */
 export function bleed(source: Stones, target: Stones) {
   if (isEmpty(source)) {
@@ -290,16 +324,27 @@ export function bleed(source: Stones, target: Stones) {
  * Perform a flood-fill of the source bitboard into the target. Modifies source in-place.
  * @param source Small bitboard pattern to expand.
  * @param target Bitboard pattern to constrain the expansion.
+ * @returns Nothing.
  */
 export function flood(source: Stones, target: Stones) {
   mask(source, target)
   bleed(source, target)
 }
 
+/**
+ * Returns the maximum occupied x-extent of a stone collection.
+ * @param stones Stones to measure.
+ * @returns Width required to contain all stones.
+ */
 export function widthOf(stones: Stones): number {
   return stones.reduce((acc, cur) => Math.max(acc, 32 - Math.clz32(cur)), 0)
 }
 
+/**
+ * Returns the maximum occupied y-extent of a stone collection.
+ * @param stones Stones to measure.
+ * @returns Height required to contain all stones.
+ */
 export function heightOf(stones: Stones): number {
   let result = 0
   for (let j = 0; j < stones.length; ++j) {
@@ -310,6 +355,13 @@ export function heightOf(stones: Stones): number {
   return result
 }
 
+/**
+ * Creates a filled rectangle bitboard.
+ * @param width Rectangle width.
+ * @param height Rectangle height.
+ * @param trueHeight Optional backing-array height.
+ * @returns Rectangle stones bitboard.
+ */
 export function rectangle(width: number, height: number, trueHeight?: number): Stones {
   const result = emptyStones(trueHeight ?? height)
   if (!width || !height) {
@@ -325,6 +377,12 @@ export function rectangle(width: number, height: number, trueHeight?: number): S
   return result
 }
 
+/**
+ * Returns the bitwise AND of one or more stone collections.
+ * @param stones Base stones value.
+ * @param rest Additional masks.
+ * @returns New stones containing only shared points.
+ */
 export function stonesAnd(stones: Stones, ...rest: Stones[]): Stones {
   const result = clone(stones)
   for (const b of rest) {
@@ -335,6 +393,11 @@ export function stonesAnd(stones: Stones, ...rest: Stones[]): Stones {
   return result
 }
 
+/**
+ * Returns the bitwise OR of one or more stone collections.
+ * @param rest Stones to combine.
+ * @returns New stones containing all occupied points.
+ */
 export function stonesOr(...rest: Stones[]): Stones {
   const height = rest.reduce((acc, cur) => Math.max(acc, cur.length), 0)
   const result = emptyStones(height)
@@ -346,6 +409,11 @@ export function stonesOr(...rest: Stones[]): Stones {
   return result
 }
 
+/**
+ * Returns the bitwise XOR of one or more stone collections.
+ * @param rest Stones to combine.
+ * @returns New stones with odd-parity occupancy.
+ */
 export function stonesXor(...rest: Stones[]): Stones {
   const height = rest.reduce((acc, cur) => Math.max(acc, cur.length), 0)
   const result = emptyStones(height)
@@ -357,7 +425,12 @@ export function stonesXor(...rest: Stones[]): Stones {
   return result
 }
 
-// Invert empty space to stones and vice-versa. Pad full rows up to `height`.
+/**
+ * Inverts a stone collection and pads full rows up to `height`.
+ * @param stones Source stones.
+ * @param height Output height.
+ * @returns Inverted stone collection.
+ */
 export function stonesNot(stones: Stones, height = HEIGHT): Stones {
   const result = emptyStones(height)
   for (let i = 0; i < result.length; ++i) {
@@ -366,6 +439,11 @@ export function stonesNot(stones: Stones, height = HEIGHT): Stones {
   return result
 }
 
+/**
+ * Inverts a stone collection in-place.
+ * @param stones Stones to invert.
+ * @returns The same mutated stones object.
+ */
 export function invertInPlace(stones: Stones): Stones {
   for (let i = 0; i < stones.length; ++i) {
     stones[i]! = ~stones[i]!
@@ -373,6 +451,12 @@ export function invertInPlace(stones: Stones): Stones {
   return stones
 }
 
+/**
+ * Computes liberty points adjacent to stones constrained by `empty`.
+ * @param stones Stones to evaluate.
+ * @param empty Intersections that count as empty.
+ * @returns Liberty intersections.
+ */
 export function liberties(stones: Stones, empty: Stones): Stones {
   const len = empty.length
   const result = emptyStones(len)
@@ -390,6 +474,11 @@ export function liberties(stones: Stones, empty: Stones): Stones {
   return result
 }
 
+/**
+ * Shifts all stones one row toward the top of the board.
+ * @param stones Source stones.
+ * @returns Shifted stones.
+ */
 export function north(stones: Stones): Stones {
   const result = clone(stones)
   result.copyWithin(0, 1)
@@ -397,6 +486,11 @@ export function north(stones: Stones): Stones {
   return result
 }
 
+/**
+ * Shifts all stones one row toward the bottom of the board.
+ * @param stones Source stones.
+ * @returns Shifted stones.
+ */
 export function south(stones: Stones): Stones {
   const result = clone(stones)
   result.copyWithin(1, 0)
@@ -404,6 +498,12 @@ export function south(stones: Stones): Stones {
   return result
 }
 
+/**
+ * Shifts all stones downward by `amount`, extending board height.
+ * @param stones Source stones.
+ * @param amount Number of rows to shift by.
+ * @returns Shifted stones with expanded height.
+ */
 export function southPlus(stones: Stones, amount = 1): Stones {
   const result = emptyStones(stones.length + amount)
   for (let i = 0; i < stones.length; ++i) {
@@ -412,6 +512,11 @@ export function southPlus(stones: Stones, amount = 1): Stones {
   return result
 }
 
+/**
+ * Shifts all stones one column west (left).
+ * @param stones Source stones.
+ * @returns Shifted stones.
+ */
 export function west(stones: Stones): Stones {
   const result = clone(stones)
   for (let i = 0; i < stones.length; ++i) {
@@ -420,6 +525,11 @@ export function west(stones: Stones): Stones {
   return result
 }
 
+/**
+ * Shifts all stones one column east (right).
+ * @param stones Source stones.
+ * @returns Shifted stones.
+ */
 export function east(stones: Stones): Stones {
   const result = clone(stones)
   for (let i = 0; i < stones.length; ++i) {
@@ -428,6 +538,11 @@ export function east(stones: Stones): Stones {
   return result
 }
 
+/**
+ * Tests whether a collection contains exactly one stone.
+ * @param stones Stones to evaluate.
+ * @returns `true` if exactly one stone is set.
+ */
 export function isSingle(stones: Stones): boolean {
   let i
   for (i = 0; i < stones.length; ++i) {
@@ -458,6 +573,11 @@ export function stoneAt(stones: Stones, x: number, y: number): boolean {
   return !!(stones[y]! & (1 << x))
 }
 
+/**
+ * Splits a collection into one-stone bitboards.
+ * @param stones Source stones.
+ * @returns One-stone bitboards for each occupied point.
+ */
 export function dots(stones: Stones): Stones[] {
   const len = stones.length
   const result: Stones[] = []
@@ -477,6 +597,11 @@ export function dots(stones: Stones): Stones[] {
   return result
 }
 
+/**
+ * Splits stones into 4-connected chains.
+ * @param stones Source stones.
+ * @returns One bitboard per connected chain.
+ */
 export function chains(stones: Stones): Stones[] {
   stones = clone(stones)
   const result: Stones[] = []
@@ -494,6 +619,12 @@ export function chains(stones: Stones): Stones[] {
   return result
 }
 
+/**
+ * Removes up to `amount` north-eastern-most stones, mutating `stones`.
+ * @param stones Stones to mutate.
+ * @param amount Number of stones to remove.
+ * @returns Nothing.
+ */
 export function witherBy(stones: Stones, amount: number) {
   for (let i = 0; i < stones.length; ++i) {
     while (stones[i] && amount) {
@@ -503,6 +634,11 @@ export function witherBy(stones: Stones, amount: number) {
   }
 }
 
+/**
+ * Converts a one-stone move bitboard into x/y coordinates.
+ * @param move Move bitboard.
+ * @returns Coordinates of the move, or `(-1, -1)` for pass.
+ */
 export function coordsOf(move: Stones): Coords {
   for (let y = 0; y < move.length; ++y) {
     if (move[y]) {
@@ -518,6 +654,11 @@ export function coordsOf(move: Stones): Coords {
   }
 }
 
+/**
+ * Converts a collection into an array of occupied coordinates.
+ * @param stones Stones to expand.
+ * @returns List of occupied coordinates.
+ */
 export function gridOf(stones: Stones): Coords[] {
   const result: Coords[] = []
   for (let y = 0; y < stones.length; ++y) {
@@ -535,6 +676,9 @@ export function gridOf(stones: Stones): Coords[] {
 /**
  * Convert an `Array` of numbers to `Stones`.
  * Pads zeros up to `height` if provided
+ * @param slices Row bitmasks.
+ * @param height Optional target height.
+ * @returns Stones representation.
  */
 export function arrayToStones(slices: number[], height?: number): Stones {
   const result = emptyStones(height ?? slices.length)
@@ -546,6 +690,8 @@ export function arrayToStones(slices: number[], height?: number): Stones {
 
 /**
  * Convert `Stones` to an `Array` of numbers.
+ * @param stones Stones to serialize.
+ * @returns Trimmed row bitmask array.
  */
 export function stonesToArray(stones: Stones): number[] {
   const result = Array.from(stones)
@@ -555,6 +701,12 @@ export function stonesToArray(stones: Stones): number[] {
   return result
 }
 
+/**
+ * Resizes a stone collection to `height`, truncating or zero-padding as needed.
+ * @param stones Stones to resize.
+ * @param height Target height.
+ * @returns Resized stones.
+ */
 export function toHeight(stones: Stones, height = HEIGHT): Stones {
   if (stones.length === height) {
     return stones
