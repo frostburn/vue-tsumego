@@ -620,7 +620,7 @@ export function chains(stones: Stones): Stones[] {
 }
 
 /**
- * Removes up to `amount` eastern-most stones from each row, mutating `stones`.
+ * Removes up to `amount` north-eastern-most stones, mutating `stones`.
  * @param stones Stones to mutate.
  * @param amount Number of stones to remove.
  * @returns Nothing.
