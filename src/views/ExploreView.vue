@@ -86,7 +86,7 @@ const playModeHelp = computed(() => {
   if (playMode.value === 'play') {
     return 'Tap intersections to play moves and analyze the position naturally.'
   }
-  return 'Tap intersections to toggle external stones without making gameplay moves.'
+  return `Tap intersections to toggle ${playMode.value} stones without making gameplay moves.`
 })
 
 async function onStateChange() {
@@ -245,11 +245,19 @@ onMounted(init)
               >
                 pass {{ passGain }}
               </button>
-              <button class="action-button button-secondary" @click="swapPlayers" :disabled="busy || done">
-                swap players
+              <button
+                class="swap action-button button-secondary"
+                @click="swapPlayers"
+                :disabled="busy || done"
+              >
+                swap colors
               </button>
-              <button class="undo action-button button-tertiary" @click="doUndo" :disabled="!undos.length">
-                ↶ undo
+              <button
+                class="undo action-button button-secondary"
+                @click="doUndo"
+                :disabled="!undos.length"
+              >
+                undo
               </button>
             </div>
           </section>
@@ -338,8 +346,14 @@ onMounted(init)
             <h2 id="session-heading">Session</h2>
             <p class="section-help">Reset the board or copy links to share your work.</p>
             <div class="button-row">
-              <button class="action-button button-secondary" @click="init" :disabled="busy">reset</button>
-              <button class="action-button button-secondary" @click="sharePosition('explore')" :disabled="busy">
+              <button class="action-button button-secondary" @click="init" :disabled="busy">
+                reset
+              </button>
+              <button
+                class="action-button button-secondary"
+                @click="sharePosition('explore')"
+                :disabled="busy"
+              >
                 share position
               </button>
               <button
@@ -350,7 +364,13 @@ onMounted(init)
                 share problem
               </button>
             </div>
-            <input class="shared-url" v-if="sharedURL.length" type="text" v-model="sharedURL" readonly />
+            <input
+              class="shared-url"
+              v-if="sharedURL.length"
+              type="text"
+              v-model="sharedURL"
+              readonly
+            />
             <p v-if="sharedURLSplash" class="status-message">URL copied to the clipboard</p>
             <p v-if="done" class="status-message">Done</p>
           </section>
@@ -382,7 +402,7 @@ onMounted(init)
 }
 
 .explore-card {
-  background: var(--color-background-soft);
+  background: var(--color-card-background);
   border: 1px solid var(--color-border);
   border-radius: var(--explore-card-radius);
   padding: var(--explore-card-padding);
@@ -390,19 +410,21 @@ onMounted(init)
 }
 
 .explore-card h2 {
-  font-size: 0.95rem;
+  color: var(--color-label-text);
+  font-size: 0.95em;
   margin: 0;
 }
 
 .section-help {
   margin: 0.22rem 0 0.5rem;
-  color: var(--color-text);
+  color: var(--color-help-text);
   opacity: 0.85;
-  font-size: 0.84rem;
+  font-size: 0.84em;
   line-height: 1.45;
 }
 
 .mode-label {
+  color: var(--color-label-text);
   margin: 0.45rem 0 0;
   font-weight: 600;
 }
@@ -414,21 +436,20 @@ onMounted(init)
 .button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.4em;
 }
 
 .action-button,
 .stepper-button {
   border: 1px solid var(--color-border);
-  border-radius: 0.45rem;
+  border-radius: 0.45em;
   font: inherit;
   margin: 0;
 }
 
 .action-button {
-  min-width: 6.75rem;
-  min-height: 2.3rem;
-  padding: 0.38rem 0.65rem;
+  min-width: 6.6em;
+  min-height: 2.3em;
 }
 
 .button-primary {
@@ -437,23 +458,9 @@ onMounted(init)
 }
 
 .button-secondary {
-  background: var(--color-background);
-}
-
-.button-tertiary {
-  background: transparent;
-}
-
-.undo.action-button {
-  color: var(--color-text);
-  min-width: 6.75rem;
-  min-height: 2.3rem;
-  padding: 0.38rem 0.65rem;
-}
-
-.undo.action-button:disabled {
-  color: var(--color-border);
-  background: var(--color-background-soft);
+  background: var(--color-button-background);
+  border-color: var(--color-button-border);
+  color: var(--color-button-text);
 }
 
 .button-bar-container {
@@ -463,12 +470,12 @@ onMounted(init)
 
 .param-grid {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.5em;
 }
 
 .param-field {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.25em;
 }
 
 .stepper {
@@ -479,22 +486,22 @@ onMounted(init)
 }
 
 .stepper input {
-  min-height: 2.1rem;
-  padding: 0.18rem 0.4rem;
+  min-height: 2.1em;
+  padding: 0.18em 0.4em;
 }
 
 .stepper-button {
-  min-width: 2rem;
-  min-height: 2.1rem;
+  min-width: 2em;
+  min-height: 2.1em;
 }
 
 .shared-url {
   width: 100%;
-  margin-top: 0.6rem;
+  margin-top: 0.6em;
 }
 
 .status-message {
-  margin: 0.55rem 0 0;
+  margin: 0.55em 0 0;
 }
 
 :where(button, input, [tabindex]):focus-visible {
@@ -506,38 +513,6 @@ onMounted(init)
   .explore-layout {
     grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
     gap: 1rem;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .explore-card {
-    background: #191d26;
-    border-color: #414c61;
-  }
-
-  .section-help {
-    color: #cfd6e1;
-    opacity: 1;
-  }
-
-  .mode-label {
-    color: #f0f4ff;
-  }
-
-  .button-secondary {
-    background: #202633;
-    border-color: #4f5e79;
-    color: #f3f7ff;
-  }
-
-  .button-tertiary {
-    background: #161b24;
-    border-color: #465067;
-    color: #d8e2f5;
-  }
-
-  :where(button, input, [tabindex]):focus-visible {
-    outline-color: #8fc0ff;
   }
 }
 </style>
