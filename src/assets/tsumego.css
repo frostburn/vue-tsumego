@@ -1,9 +1,60 @@
 .goban-container {
   max-width: 46em;
 }
-.controls {
-  display: flex;
+
+.mode-card {
+  background: var(--color-card-background);
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  padding: 0.75rem;
+  margin: 0;
 }
+
+.mode-card h2 {
+  color: var(--color-label-text);
+  font-size: 0.95em;
+  margin: 0;
+}
+
+.section-help {
+  margin: 0.22rem 0 0.5rem;
+  color: var(--color-help-text);
+  opacity: 0.85;
+  font-size: 0.84em;
+  line-height: 1.45;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.action-button {
+  border: 1px solid var(--color-border);
+  border-radius: 0.45em;
+  font: inherit;
+  margin: 0;
+  min-width: 6.6em;
+  min-height: 2.3em;
+}
+
+.button-primary {
+  background: var(--color-background-mute);
+  font-weight: 600;
+}
+
+.button-secondary {
+  background: var(--color-button-background);
+  border-color: var(--color-button-border);
+  color: var(--color-button-text);
+}
+
+:where(button, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-link);
+  outline-offset: 2px;
+}
+
 button {
   margin-top: 0.4em;
   margin-bottom: 0.5em;

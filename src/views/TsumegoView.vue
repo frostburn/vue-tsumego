@@ -267,34 +267,69 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 
     <p v-if="!data.state">Loading...</p>
     <template v-else>
-      <div class="goban-container">
-        <TheGoban
-          :state="gameState"
-          :busy="busy || done"
-          :solutionInfo="showInfo ? playerInfo : undefined"
-          @play="play"
-        />
+      <div class="tsumego-layout">
+        <section class="mode-card board-card" aria-label="Board position">
+          <div class="goban-container">
+            <TheGoban
+              :state="gameState"
+              :busy="busy || done"
+              :solutionInfo="showInfo ? playerInfo : undefined"
+              @play="play"
+            />
+          </div>
+        </section>
+
+        <section class="mode-card" aria-labelledby="tsumego-controls-heading">
+          <h2 id="tsumego-controls-heading">Play Actions</h2>
+          <p class="section-help">Solve the problem by choosing local forcing and winning moves.</p>
+          <div class="button-row">
+            <button
+              class="action-button button-primary"
+              @click="play(-1, -1)"
+              :disabled="busy || done"
+              :style="myPassStyle"
+            >
+              pass {{ passGain }}
+            </button>
+            <span class="indicator-container">
+              <PlayerIndicator :whiteToPlay="whiteToPlay" />
+            </span>
+            <button
+              class="action-button button-secondary undo"
+              @click="doUndo"
+              :disabled="!undos.length"
+            />
+            <button class="action-button button-secondary" :disabled="busy" @click="init">
+              reset
+            </button>
+          </div>
+        </section>
+
+        <section class="mode-card" aria-labelledby="tsumego-status-heading">
+          <h2 id="tsumego-status-heading">Status</h2>
+          <p class="section-help">Track the current result and threat context for this problem.</p>
+          <p class="status-line">Ko-threats: {{ koThreats }}</p>
+          <p v-if="fail" class="status-line">Failed</p>
+          <p v-else-if="success" class="status-line">Success</p>
+          <p v-if="done" class="status-line">Done</p>
+        </section>
       </div>
-      <div class="controls">
-        <button @click="play(-1, -1)" :disabled="busy || done" :style="myPassStyle">
-          pass {{ passGain }}
-        </button>
-        <span class="indicator-container">
-          <PlayerIndicator :whiteToPlay="whiteToPlay" />
-        </span>
-        <button class="undo" @click="doUndo" :disabled="!undos.length" />
-        <button :disabled="busy" @click="init">reset</button>
-      </div>
-      <p>Ko-threats: {{ koThreats }}</p>
-      <p v-if="fail">Failed</p>
-      <p v-else-if="success">Success</p>
-      <p v-if="done">Done</p>
     </template>
     <h2 v-if="error">{{ error.message }}</h2>
   </main>
 </template>
 
 <style scoped>
+.tsumego-layout {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 1fr;
+}
+
+.board-card {
+  padding: 0.75rem;
+}
+
 .sister-tsumego {
   font-size: 2.5em;
   font-weight: bold;
@@ -311,7 +346,15 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 .indicator-container {
   display: inline-block;
   width: 3.9em;
-  margin-left: 0.5em;
-  margin-right: 0.5em;
+}
+.status-line {
+  margin: 0.3em 0 0;
+}
+
+@media (min-width: 62rem) {
+  .tsumego-layout {
+    grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
+    align-items: start;
+  }
 }
 </style>

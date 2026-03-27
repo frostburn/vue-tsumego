@@ -415,52 +415,17 @@ onMounted(init)
   margin: 0;
 }
 
-.section-help {
-  margin: 0.22rem 0 0.5rem;
-  color: var(--color-help-text);
-  opacity: 0.85;
-  font-size: 0.84em;
-  line-height: 1.45;
-}
-
 .mode-label {
   color: var(--color-label-text);
   margin: 0.45rem 0 0;
   font-weight: 600;
 }
 
-.goban-container {
-  max-width: 46em;
-}
-
-.button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4em;
-}
-
-.action-button,
 .stepper-button {
   border: 1px solid var(--color-border);
   border-radius: 0.45em;
   font: inherit;
   margin: 0;
-}
-
-.action-button {
-  min-width: 6.6em;
-  min-height: 2.3em;
-}
-
-.button-primary {
-  background: var(--color-background-mute);
-  font-weight: 600;
-}
-
-.button-secondary {
-  background: var(--color-button-background);
-  border-color: var(--color-button-border);
-  color: var(--color-button-text);
 }
 
 .button-bar-container {
@@ -502,11 +467,6 @@ onMounted(init)
 
 .status-message {
   margin: 0.55em 0 0;
-}
-
-:where(button, input, [tabindex]):focus-visible {
-  outline: 3px solid var(--color-link);
-  outline-offset: 2px;
 }
 
 @media (min-width: 62rem) {
