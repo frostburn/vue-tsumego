@@ -74,7 +74,7 @@ const myPassStyle = computed(() => passStyle(info.value))
 
 async function onStateChange() {
   busy.value = true
-  await getInfo()
+  await clearSharedURLAndGetInfo()
   busy.value = false
 }
 
@@ -96,7 +96,8 @@ async function swapPlayers() {
   await onStateChange()
 }
 
-async function getInfo() {
+async function clearSharedURLAndGetInfo() {
+  sharedURL.value = ''
   info.value = await getSolutionInfo(props.collection, { state: stateJSON.value })
 }
 
@@ -127,7 +128,7 @@ async function play(x: number, y: number) {
     // Trigger `reactive()`
     gameState.player = clone(gameState.player)
   }
-  await getInfo()
+  await clearSharedURLAndGetInfo()
   busy.value = false
 }
 
@@ -152,7 +153,7 @@ async function doUndo() {
   gameState.assignFromJSON(undo)
   done.value = false
   busy.value = true
-  await getInfo()
+  await clearSharedURLAndGetInfo()
   busy.value = false
 }
 
