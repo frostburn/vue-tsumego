@@ -248,7 +248,9 @@ onMounted(init)
               <button class="action-button button-secondary" @click="swapPlayers" :disabled="busy || done">
                 swap players
               </button>
-              <button class="undo action-button button-tertiary" @click="doUndo" :disabled="!undos.length" />
+              <button class="undo action-button button-tertiary" @click="doUndo" :disabled="!undos.length">
+                ↶ undo
+              </button>
             </div>
           </section>
 
@@ -444,21 +446,14 @@ onMounted(init)
 
 .undo.action-button {
   color: var(--color-text);
-  min-width: 2.3rem;
-  width: 2.3rem;
+  min-width: 6.75rem;
   min-height: 2.3rem;
-  padding: 0;
+  padding: 0.38rem 0.65rem;
 }
 
 .undo.action-button:disabled {
   color: var(--color-border);
   background: var(--color-background-soft);
-}
-
-.undo.action-button::after {
-  content: '\0238C';
-  font-size: 1.35rem;
-  line-height: 1;
 }
 
 .button-bar-container {
