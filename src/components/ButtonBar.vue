@@ -18,7 +18,7 @@ const model = defineModel()
         <rect x="0" y="0.5" width="1" height="0.5" fill="white" />
       </mask>
     </defs>
-    <g mask="url(#button-bar-mask)">
+    <g mask="url(#button-bar-mask)" role="radiogroup" aria-label="Play and editing modes">
       <rect class="background" x="0" y="0" width="3" height="1" />
 
       <rect v-show="model === 'play'" class="selected" x="0" y="0" width="1" height="1" />
@@ -33,9 +33,42 @@ const model = defineModel()
       <rect v-show="model === 'white'" class="selected" x="2" y="0" width="1" height="1" />
       <circle cx="2.5" cy="0.5" r="0.4" fill="white" />
 
-      <rect @click="model = 'play'" class="overlay" x="0" y="0" width="1" height="1" />
-      <rect @click="model = 'black'" class="overlay" x="1" y="0" width="1" height="1" />
-      <rect @click="model = 'white'" class="overlay" x="2" y="0" width="1" height="1" />
+      <rect
+        @click="model = 'play'"
+        class="overlay"
+        x="0"
+        y="0"
+        width="1"
+        height="1"
+        role="radio"
+        :aria-checked="model === 'play'"
+      >
+        <title>Analyze moves in sequence and follow turn order.</title>
+      </rect>
+      <rect
+        @click="model = 'black'"
+        class="overlay"
+        x="1"
+        y="0"
+        width="1"
+        height="1"
+        role="radio"
+        :aria-checked="model === 'black'"
+      >
+        <title>Edit board by toggling black stones on intersections.</title>
+      </rect>
+      <rect
+        @click="model = 'white'"
+        class="overlay"
+        x="2"
+        y="0"
+        width="1"
+        height="1"
+        role="radio"
+        :aria-checked="model === 'white'"
+      >
+        <title>Edit board by toggling white stones on intersections.</title>
+      </rect>
     </g>
   </svg>
 </template>
