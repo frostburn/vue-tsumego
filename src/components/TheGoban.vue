@@ -127,7 +127,6 @@ function onTouchStart(event: TouchEvent) {
   ctm = svg.getScreenCTM()!.inverse()
   pt = svg.createSVGPoint()
   touchGuide(event)
-  clampGuideToBoard()
 }
 
 function onTouchMove(event: TouchEvent) {
@@ -136,7 +135,6 @@ function onTouchMove(event: TouchEvent) {
   }
   event.preventDefault()
   touchGuide(event)
-  clampGuideToBoard()
 }
 
 function onTouchEnd(event: TouchEvent) {
@@ -145,7 +143,6 @@ function onTouchEnd(event: TouchEvent) {
   }
   event.preventDefault()
   touchGuide(event)
-  clampGuideToBoard()
   if (guideLegal.value) {
     emit('play', guideX.value, guideY.value)
   }
