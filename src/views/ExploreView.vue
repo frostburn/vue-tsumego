@@ -21,6 +21,7 @@ import {
 } from '../util'
 import TheGoban from '../components/TheGoban.vue'
 import ButtonBar from '../components/ButtonBar.vue'
+import NumericSlider from '../components/NumericSlider.vue'
 
 const props = defineProps<{ collection: string }>()
 
@@ -89,6 +90,28 @@ const playModeHelp = computed(() => {
   return `Tap intersections to toggle ${playMode.value} stones without making gameplay moves.`
 })
 
+const buttonModel = computed({
+  get: () => (gameState.whiteToPlay ? -gameState.button : gameState.button),
+  async set(newValue: number) {
+    if (gameState.whiteToPlay) {
+      gameState.button = -newValue
+    } else {
+      gameState.button = newValue
+    }
+    await onStateChange()
+  },
+})
+
+const buttonLabel = computed(() => {
+  if (!buttonModel.value) {
+    return 'Button unclaimed'
+  }
+  if (buttonModel.value > 0) {
+    return 'Button claimed by Black'
+  }
+  return 'Button claimed by White'
+})
+
 async function onStateChange() {
   busy.value = true
   await clearSharedURLAndGetInfo()
@@ -100,11 +123,6 @@ async function incThreats(delta: number) {
     -maxThreats.value,
     Math.min(maxThreats.value, gameState.koThreats + delta),
   )
-  await onStateChange()
-}
-
-async function incButton(delta: number) {
-  gameState.button = Math.max(-1, Math.min(1, gameState.button + delta))
   await onStateChange()
 }
 
@@ -309,35 +327,16 @@ onMounted(init)
               </div>
 
               <div class="param-field">
-                <label for="button">Button</label>
-                <div class="stepper">
-                  <input
-                    id="button"
-                    v-model="gameState.button"
-                    :disabled="busy || done"
-                    :min="-1"
-                    :max="1"
-                    @change="onStateChange"
-                    type="number"
-                    step="1"
-                  />
-                  <button
-                    type="button"
-                    class="stepper-button button-tertiary"
-                    :disabled="busy || done || gameState.button === -1"
-                    @click="incButton(-1)"
-                  >
-                    -
-                  </button>
-                  <button
-                    type="button"
-                    class="stepper-button button-tertiary"
-                    :disabled="busy || done || gameState.button === 1"
-                    @click="incButton(+1)"
-                  >
-                    +
-                  </button>
-                </div>
+                <label for="button">{{ buttonLabel }}</label>
+                <NumericSlider
+                  id="button"
+                  v-model="buttonModel"
+                  :disabled="busy || done"
+                  :min="-1"
+                  :max="1"
+                  :step="1"
+                  @change="onStateChange"
+                />
               </div>
             </div>
           </section>
@@ -425,6 +424,10 @@ onMounted(init)
 .stepper-button {
   min-width: 2em;
   min-height: 2.1em;
+}
+
+#button {
+  accent-color: black;
 }
 
 .shared-url {
