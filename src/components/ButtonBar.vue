@@ -3,10 +3,40 @@ defineProps<{
   whiteToPlay: boolean
 }>()
 const model = defineModel()
+
+const modes = ['play', 'black', 'white'] as const
+
+function onKeyDown(event: KeyboardEvent) {
+  const currentIndex = modes.indexOf(model.value)
+  if (currentIndex < 0) {
+    return
+  }
+
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    event.preventDefault()
+    model.value = modes[(currentIndex + 1) % modes.length]
+    return
+  }
+
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    model.value = modes[(currentIndex - 1 + modes.length) % modes.length]
+    return
+  }
+}
 </script>
 
 <template>
-  <svg width="100%" height="100%" viewBox="0 0 3 1" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="100%"
+    height="100%"
+    viewBox="0 0 3 1"
+    xmlns="http://www.w3.org/2000/svg"
+    role="radiogroup"
+    aria-label="Play and editing modes"
+    tabindex="0"
+    @keydown="onKeyDown"
+  >
     <defs>
       <mask id="button-bar-mask">
         <rect x="0" y="0" width="3" height="1" rx="0.1" ry="0.1" fill="white" />
@@ -18,7 +48,7 @@ const model = defineModel()
         <rect x="0" y="0.5" width="1" height="0.5" fill="white" />
       </mask>
     </defs>
-    <g mask="url(#button-bar-mask)" role="radiogroup" aria-label="Play and editing modes">
+    <g mask="url(#button-bar-mask)">
       <rect class="background" x="0" y="0" width="3" height="1" />
 
       <rect v-show="model === 'play'" class="selected" x="0" y="0" width="1" height="1" />

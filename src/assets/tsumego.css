@@ -75,7 +75,7 @@
   color: var(--color-button-text);
 }
 
-:where(button, input, [tabindex]):focus-visible {
+:where(button, input, svg, [tabindex]):focus-visible {
   outline: 3px solid var(--color-link);
   outline-offset: 2px;
 }
