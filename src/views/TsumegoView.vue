@@ -86,6 +86,8 @@ const myPassStyle = computed(() => {
   return passStyle(playerInfo.value)
 })
 
+const playerToMoveLabel = computed(() => (whiteToPlay.value ? 'White to play' : 'Black to play'))
+
 async function getInfo() {
   const json = await getSolutionInfo(props.collection, { state: stateJSON.value })
   info.value = json
@@ -267,28 +269,67 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 
     <p v-if="!data.state">Loading...</p>
     <template v-else>
-      <div class="goban-container">
-        <TheGoban
-          :state="gameState"
-          :busy="busy || done"
-          :solutionInfo="showInfo ? playerInfo : undefined"
-          @play="play"
-        />
+      <div class="tsumego-layout">
+        <section class="card board-card" aria-label="Board position">
+          <div class="goban-container">
+            <TheGoban
+              :state="gameState"
+              :busy="busy || done"
+              :solutionInfo="showInfo ? playerInfo : undefined"
+              @play="play"
+            />
+          </div>
+        </section>
+
+        <div class="sidebar">
+          <section class="card" aria-labelledby="tsumego-controls-heading">
+            <h2 id="tsumego-controls-heading">Play Actions</h2>
+            <p class="section-help">Solve the problem by choosing local winning moves.</p>
+            <div class="button-row">
+              <button
+                class="action-button button-primary"
+                @click="play(-1, -1)"
+                :disabled="busy || done"
+                :style="myPassStyle"
+              >
+                pass {{ passGain }}
+              </button>
+              <button
+                class="action-button button-secondary undo"
+                @click="doUndo"
+                :disabled="!undos.length"
+              >
+                undo
+              </button>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="tsumego-session-heading">
+            <h2 id="tsumego-session-heading">Session</h2>
+            <p class="section-help">Color to play and threat context for this problem.</p>
+            <div class="session-row">
+              <span class="indicator-container" aria-hidden="true">
+                <PlayerIndicator :whiteToPlay="whiteToPlay" />
+              </span>
+              <p class="turn-label">{{ playerToMoveLabel }}</p>
+            </div>
+            <p class="ko-threats-line">Ko-threats: {{ koThreats }}</p>
+          </section>
+
+          <section class="card" aria-labelledby="tsumego-status-heading">
+            <h2 id="tsumego-status-heading">Status</h2>
+            <p class="section-help">Track the current result and board reset controls.</p>
+            <p v-if="fail" class="status-line">Failed</p>
+            <p v-else-if="success" class="status-line">Success</p>
+            <p v-if="done" class="status-line">Done</p>
+            <div class="button-row">
+              <button class="action-button button-secondary" :disabled="busy" @click="init">
+                reset
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
-      <div class="controls">
-        <button @click="play(-1, -1)" :disabled="busy || done" :style="myPassStyle">
-          pass {{ passGain }}
-        </button>
-        <span class="indicator-container">
-          <PlayerIndicator :whiteToPlay="whiteToPlay" />
-        </span>
-        <button class="undo" @click="doUndo" :disabled="!undos.length" />
-        <button :disabled="busy" @click="init">reset</button>
-      </div>
-      <p>Ko-threats: {{ koThreats }}</p>
-      <p v-if="fail">Failed</p>
-      <p v-else-if="success">Success</p>
-      <p v-if="done">Done</p>
     </template>
     <h2 v-if="error">{{ error.message }}</h2>
   </main>
@@ -311,7 +352,26 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 .indicator-container {
   display: inline-block;
   width: 3.9em;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.turn-label {
   margin-left: 0.5em;
-  margin-right: 0.5em;
+  color: var(--color-label-text);
+  font-weight: 600;
+}
+
+.ko-threats-line {
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.status-line {
+  margin: 0.3em 0 0;
 }
 </style>

@@ -84,7 +84,7 @@ const playModeLabel = computed(() => {
 
 const playModeHelp = computed(() => {
   if (playMode.value === 'play') {
-    return 'Tap intersections to play moves and analyze the position naturally.'
+    return 'Tap intersections to play alternating moves and analyze the position naturally.'
   }
   return `Tap intersections to toggle ${playMode.value} stones without making gameplay moves.`
 })
@@ -218,8 +218,8 @@ onMounted(init)
     <h1>{{ data.title }}</h1>
     <p v-if="!data.state">Loading...</p>
     <template v-else>
-      <div class="explore-layout">
-        <section class="explore-card board-card" aria-label="Board position">
+      <div class="tsumego-layout">
+        <section class="card board-card" aria-label="Board position">
           <div class="goban-container">
             <TheGoban
               :state="gameState"
@@ -232,8 +232,8 @@ onMounted(init)
           </div>
         </section>
 
-        <div class="explore-sidebar">
-          <section class="explore-card" aria-labelledby="play-actions-heading">
+        <div class="sidebar">
+          <section class="card" aria-labelledby="play-actions-heading">
             <h2 id="play-actions-heading">Play Actions</h2>
             <p class="section-help">Core controls for stepping through the position.</p>
             <div class="button-row">
@@ -262,7 +262,7 @@ onMounted(init)
             </div>
           </section>
 
-          <section class="explore-card" aria-labelledby="edit-mode-heading">
+          <section class="card" aria-labelledby="edit-mode-heading">
             <h2 id="edit-mode-heading">Edit Mode</h2>
             <p class="section-help">Switch between normal play and manual stone editing.</p>
             <div class="button-bar-container">
@@ -272,7 +272,7 @@ onMounted(init)
             <p class="section-help">{{ playModeHelp }}</p>
           </section>
 
-          <section class="explore-card" aria-labelledby="position-params-heading">
+          <section class="card" aria-labelledby="position-params-heading">
             <h2 id="position-params-heading">Position Params</h2>
             <p class="section-help">Tune ko-threat count and button state for this setup.</p>
             <div class="param-grid">
@@ -342,7 +342,7 @@ onMounted(init)
             </div>
           </section>
 
-          <section class="explore-card" aria-labelledby="session-heading">
+          <section class="card" aria-labelledby="session-heading">
             <h2 id="session-heading">Session</h2>
             <p class="section-help">Reset the board or copy links to share your work.</p>
             <div class="button-row">
@@ -382,85 +382,17 @@ onMounted(init)
 </template>
 
 <style scoped>
-.explore-layout {
-  --explore-gap: 0.6rem;
-  --explore-card-padding: 0.75rem;
-  --explore-card-radius: 0.6rem;
-  display: grid;
-  gap: var(--explore-gap);
-  grid-template-columns: 1fr;
-  align-items: start;
-}
-
-.board-card {
-  padding: var(--explore-card-padding);
-}
-
-.explore-sidebar {
-  display: grid;
-  gap: var(--explore-gap);
-}
-
-.explore-card {
-  background: var(--color-card-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--explore-card-radius);
-  padding: var(--explore-card-padding);
-  margin: 0;
-}
-
-.explore-card h2 {
-  color: var(--color-label-text);
-  font-size: 0.95em;
-  margin: 0;
-}
-
-.section-help {
-  margin: 0.22rem 0 0.5rem;
-  color: var(--color-help-text);
-  opacity: 0.85;
-  font-size: 0.84em;
-  line-height: 1.45;
-}
-
 .mode-label {
   color: var(--color-label-text);
   margin: 0.45rem 0 0;
   font-weight: 600;
 }
 
-.goban-container {
-  max-width: 46em;
-}
-
-.button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4em;
-}
-
-.action-button,
 .stepper-button {
   border: 1px solid var(--color-border);
   border-radius: 0.45em;
   font: inherit;
   margin: 0;
-}
-
-.action-button {
-  min-width: 6.6em;
-  min-height: 2.3em;
-}
-
-.button-primary {
-  background: var(--color-background-mute);
-  font-weight: 600;
-}
-
-.button-secondary {
-  background: var(--color-button-background);
-  border-color: var(--color-button-border);
-  color: var(--color-button-text);
 }
 
 .button-bar-container {
@@ -502,17 +434,5 @@ onMounted(init)
 
 .status-message {
   margin: 0.55em 0 0;
-}
-
-:where(button, input, [tabindex]):focus-visible {
-  outline: 3px solid var(--color-link);
-  outline-offset: 2px;
-}
-
-@media (min-width: 62rem) {
-  .explore-layout {
-    grid-template-columns: minmax(24rem, 1.9fr) minmax(17rem, 1fr);
-    gap: 1rem;
-  }
 }
 </style>
