@@ -195,15 +195,20 @@ function init() {
           gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
         }
         root = new State(gameState)
-        if (route.query?.s && !Array.isArray(route.query.s)) {
-          const queryState = decodeQuery(root, route.query.s)
-          const state = queryState.toJSON()
-          data.value = { title: json.title, subtitle: 'Custom Study', state }
-          gameState.assignFromJSON(state)
-          return { state }
-        } else {
-          throw new Error('No custom position found')
+        let subtitle = 'Custom Study (root position)'
+        let state = gameState.toJSON()
+        const queryState = route.query?.s
+        if (queryState && !Array.isArray(queryState)) {
+          try {
+            state = decodeQuery(root, queryState).toJSON()
+            subtitle = 'Custom Study'
+          } catch {
+            subtitle = 'Custom Study (root position)'
+          }
         }
+        data.value = { title: json.title, subtitle, state }
+        gameState.assignFromJSON(state)
+        return { state }
       })
       .then((json) => getSolutionInfo(props.collection, json))
       .then((json) => {
