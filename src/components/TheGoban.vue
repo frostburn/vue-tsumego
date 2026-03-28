@@ -18,6 +18,7 @@ const activeTouchId = ref<number | null>(null)
 const guideActive = ref(false)
 const guideX = ref(-1)
 const guideY = ref(-1)
+const preventFocus = ref(false)
 
 const width = computed(() => props.state.width)
 const height = computed(() => props.state.height)
@@ -160,6 +161,9 @@ function onTouchCancel(event: TouchEvent) {
 }
 
 function onFocus() {
+  if (preventFocus.value) {
+    return
+  }
   guideActive.value = true
   if (!guideLegal.value) {
     // Try to start from a reasonable location
@@ -184,6 +188,8 @@ function onKeydown(event: KeyboardEvent) {
   if (props.busy) {
     return
   }
+
+  preventFocus.value = false
 
   switch (event.key) {
     case 'ArrowUp':
@@ -213,6 +219,11 @@ function onKeydown(event: KeyboardEvent) {
   event.preventDefault()
   activateGuide()
 }
+
+function invalidateGuide() {
+  guideActive.value = false
+  preventFocus.value = true
+}
 </script>
 
 <template>
@@ -230,6 +241,7 @@ function onKeydown(event: KeyboardEvent) {
     @focus="onFocus"
     @blur="onBlur"
     @keydown="onKeydown"
+    @mousedown="invalidateGuide"
   >
     <rect
       class="wood"
