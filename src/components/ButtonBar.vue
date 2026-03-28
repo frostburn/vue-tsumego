@@ -2,12 +2,12 @@
 defineProps<{
   whiteToPlay: boolean
 }>()
-const model = defineModel()
+const model = defineModel<'play' | 'black' | 'white'>()
 
 const modes = ['play', 'black', 'white'] as const
 
 function onKeyDown(event: KeyboardEvent) {
-  const currentIndex = modes.indexOf(model.value)
+  const currentIndex = modes.indexOf(model.value!)
   if (currentIndex < 0) {
     return
   }
