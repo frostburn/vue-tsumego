@@ -9,6 +9,7 @@ import { type SolutionInfo } from '../core/solver'
 import {
   MIN_WIDTH,
   MIN_HEIGHT,
+  formatLoss,
   formatGain,
   passStyle,
   API_URL,
@@ -34,7 +35,7 @@ const error = ref<Error | null>(null)
 
 const done = ref(false)
 const success = ref(false)
-const fail = ref(false)
+const totalLoss = ref(0)
 
 const busy = ref(true)
 
@@ -45,7 +46,7 @@ const gameState = reactive(new State())
 gameState.visualArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 gameState.logicalArea = rectangle(MIN_WIDTH, MIN_HEIGHT)
 
-const undos = reactive<StateJSON[]>([])
+const undos = reactive<[StateJSON, number][]>([])
 
 // Info is used for grading player moves and making bot moves
 const info = ref<SolutionInfo | undefined>(undefined)
@@ -63,7 +64,7 @@ const tsumegoStore = useTsumegoStore()
 
 const stateJSON = computed(() => gameState.toJSON())
 
-const showInfo = computed(() => !done.value && (success.value || fail.value))
+const showInfo = computed(() => !done.value && (success.value || totalLoss.value > 0))
 
 const passGain = computed(() => {
   if (!showInfo.value) {
@@ -129,12 +130,12 @@ async function play(x: number, y: number) {
     return
   }
   busy.value = true
+  const undo: [StateJSON, number] = [stateJSON.value, totalLoss.value]
   for (const move of info.value.moves) {
     if (move.x === x && move.y === y && move.lowGain !== 0) {
-      fail.value = true
+      totalLoss.value -= move.lowGain
     }
   }
-  const undo = stateJSON.value
   const r = gameState.makeMove(x, y)
   if (r == MoveResult.Illegal) {
     busy.value = false
@@ -160,7 +161,7 @@ async function play(x: number, y: number) {
       success.value = true
     }
   }
-  if (fail.value || success.value) {
+  if (totalLoss.value > 0 || success.value) {
     playerInfo.value = info.value
   }
   busy.value = false
@@ -168,9 +169,9 @@ async function play(x: number, y: number) {
 }
 
 async function doUndo() {
-  const undo = undos.pop()!
+  const [undo, loss] = undos.pop()!
   gameState.assignFromJSON(undo)
-  fail.value = false
+  totalLoss.value = loss
   success.value = false
   done.value = false
   busy.value = true
@@ -181,7 +182,7 @@ async function doUndo() {
 function init() {
   done.value = false
   success.value = false
-  fail.value = false
+  totalLoss.value = 0
   busy.value = true
   info.value = undefined
   playerInfo.value = undefined
@@ -269,7 +270,7 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
     <span v-else class="sister-tsumego disabled">&#10095;|</span>
 
     <div class="status-container">
-      <StatusIndicator :fail="fail" :success="success" />
+      <StatusIndicator :fail="totalLoss > 0" :success="success" />
     </div>
 
     <p v-if="!data.state">Loading...</p>
@@ -324,7 +325,9 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
           <section class="card" aria-labelledby="tsumego-status-heading">
             <h2 id="tsumego-status-heading">Status</h2>
             <p class="section-help">Track the current result and board reset controls.</p>
-            <p v-if="fail" class="status-line">Failed</p>
+            <p v-if="totalLoss" class="status-line">
+              <b>Failed:</b> {{ formatLoss(totalLoss) }} score lost in total
+            </p>
             <p v-else-if="success" class="status-line">Success</p>
             <p v-if="done" class="status-line">Done</p>
             <div class="button-row">

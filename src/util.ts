@@ -46,19 +46,24 @@ export type TsumegoResponse = {
 }
 
 /**
+ * Formats a raw loss value for compact UI display.
+ * @param loss Points lost for a sequence of moves.
+ * @returns Human-friendly loss string used in move labels.
+ */
+export function formatLoss(loss: number) {
+  if (loss > 100) {
+    return 'Ω'
+  }
+  return loss.toFixed(1)
+}
+
+/**
  * Formats a move's low gain value for compact UI display.
  * @param info Solver metadata for a candidate move.
  * @returns Human-friendly gain string used in move labels.
  */
 export function formatGain(info: MoveInfo) {
-  const gain = info.lowGain
-  if (gain < -100) {
-    return '-Ω'
-  }
-  if (!gain) {
-    return '-0.0'
-  }
-  return gain.toFixed(1)
+  return '-' + formatLoss(-info.lowGain)
 }
 
 /**
