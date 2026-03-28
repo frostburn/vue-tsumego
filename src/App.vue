@@ -1,8 +1,8 @@
 <template>
   <header>
-    <h1>Life & Death Index</h1>
     <div class="wrapper">
       <nav>
+        <span class="short-title">L&D Idx</span>
         <RouterLink to="/">Home</RouterLink>
         <template v-if="$route.params.collection">
           <span>&gt;</span>
@@ -44,6 +44,12 @@ header {
   max-height: 100vh;
 }
 
+.short-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  padding-right: 1rem;
+}
+
 nav a.router-link-exact-active {
   color: var(--color-text);
 }
@@ -60,9 +66,5 @@ nav a {
 
 nav a.breadcrumb {
   border-left: none;
-}
-
-nav a:first-of-type {
-  border: 0;
 }
 </style>

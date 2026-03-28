@@ -4,6 +4,7 @@ import CollectionList from '../components/CollectionList.vue'
 
 <template>
   <main>
+    <h1>Life & Death Index</h1>
     <p class="description">A database of completely solved tsumego i.e. go problems</p>
     <p>
       Problems have to be specially crafted for the computer. See the
