@@ -30,6 +30,7 @@
   --c-ink: #202633;
   --c-steel: #4f5e79;
   --c-snow: #f3f7ff;
+  --c-blue-gray: #404550;
 }
 
 /* semantic color variables for this project */
@@ -52,6 +53,7 @@
   --color-help-text: var(--vt-c-text-light-1);
   --color-label-text: var(--vt-c-text-light-1);
 
+  --color-button-primary-background: var(--vt-c-white-mute);
   --color-button-background: var(--vt-c-white-soft);
   --color-button-border: var(--vt-c-divider-dark-2);
   --color-button-text: var(--vt-c-text-light-1);
@@ -75,6 +77,7 @@
     --color-help-text: var(--c-daylight);
     --color-label-text: var(--c-ice);
 
+    --color-button-primary-background: var(--c-blue-gray);
     --color-button-background: var(--c-ink);
     --color-button-border: var(--c-steel);
     --color-button-text: var(--c-snow);

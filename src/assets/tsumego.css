@@ -65,7 +65,8 @@
 }
 
 .button-primary {
-  background: var(--color-background-mute);
+  background: var(--color-button-primary-background);
+  border-color: var(--color-button-border);
   font-weight: 600;
 }
 
