@@ -16,8 +16,8 @@ const emit = defineEmits(['play'])
 
 const activeTouchId = ref<number | null>(null)
 const guideActive = ref(false)
-const guideX = ref(0)
-const guideY = ref(0)
+const guideX = ref(-1)
+const guideY = ref(-1)
 
 const width = computed(() => props.state.width)
 const height = computed(() => props.state.height)
@@ -160,7 +160,20 @@ function onTouchCancel(event: TouchEvent) {
 }
 
 function onFocus() {
-  activateGuide()
+  guideActive.value = true
+  if (!guideLegal.value) {
+    // Try to start from a reasonable location
+    for (const y of [1, 0]) {
+      for (const x of [1, 2, 3, 4, 5, 6, 0]) {
+        guideX.value = x
+        guideY.value = y
+        if (guideLegal.value) {
+          return
+        }
+      }
+    }
+  }
+  clampGuideToBoard()
 }
 
 function onBlur() {
@@ -172,21 +185,18 @@ function onKeydown(event: KeyboardEvent) {
     return
   }
 
-  let nextX = guideX.value
-  let nextY = guideY.value
-
   switch (event.key) {
     case 'ArrowUp':
-      nextY -= 1
+      guideY.value--
       break
     case 'ArrowDown':
-      nextY += 1
+      guideY.value++
       break
     case 'ArrowLeft':
-      nextX -= 1
+      guideX.value--
       break
     case 'ArrowRight':
-      nextX += 1
+      guideX.value++
       break
     case ' ':
     case 'Enter':
@@ -202,8 +212,6 @@ function onKeydown(event: KeyboardEvent) {
 
   event.preventDefault()
   activateGuide()
-  guideX.value = Math.max(0, Math.min(width.value - 1, nextX))
-  guideY.value = Math.max(0, Math.min(height.value - 1, nextY))
 }
 </script>
 
