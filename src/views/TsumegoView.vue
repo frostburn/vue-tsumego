@@ -59,6 +59,7 @@ const next = ref<{ collection: string; tsumego: string } | null>(null)
 
 let root = new State()
 const route = useRoute()
+let initRequestToken = 0
 
 const tsumegoStore = useTsumegoStore()
 
@@ -180,16 +181,22 @@ async function doUndo() {
 }
 
 function init() {
+  const token = ++initRequestToken
+  const isLatestInit = () => token === initRequestToken
   done.value = false
   success.value = false
   totalLoss.value = 0
   busy.value = true
   info.value = undefined
   playerInfo.value = undefined
+  error.value = null
   undos.length = 0
   if (props.tsumego === undefined) {
     fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
       .then((json) => {
+        if (!isLatestInit()) {
+          return undefined
+        }
         gameState.assignFromJSON(json.root)
         if (json.canStretch) {
           gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
@@ -205,17 +212,34 @@ function init() {
           throw new Error('No custom position found')
         }
       })
-      .then((json) => getSolutionInfo(props.collection, json))
       .then((json) => {
+        if (!json || !isLatestInit()) {
+          return undefined
+        }
+        return getSolutionInfo(props.collection, json)
+      })
+      .then((json) => {
+        if (!json || !isLatestInit()) {
+          return
+        }
         info.value = json
         busy.value = false
         whiteToPlay.value = gameState.whiteToPlay
         koThreats.value = gameState.koThreats
       })
-      .catch((err) => (error.value = err))
+      .catch((err) => {
+        if (!isLatestInit()) {
+          return
+        }
+        error.value = err
+        busy.value = false
+      })
   } else {
     fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
       .then((json) => {
+        if (!isLatestInit()) {
+          return undefined
+        }
         data.value = json
         gameState.assignFromJSON(json.state)
         if (json.canStretch) {
@@ -223,19 +247,37 @@ function init() {
         }
         return json
       })
-      .then((json) => getSolutionInfo(props.collection, json))
       .then((json) => {
+        if (!json || !isLatestInit()) {
+          return undefined
+        }
+        return getSolutionInfo(props.collection, json)
+      })
+      .then((json) => {
+        if (!json || !isLatestInit()) {
+          return undefined
+        }
         info.value = json
         if (data.value.botToPlay) {
-          playForcingMove(json)
+          return playForcingMove(json)
         }
+        return undefined
       })
       .then(() => {
+        if (!isLatestInit()) {
+          return
+        }
         busy.value = false
         whiteToPlay.value = gameState.whiteToPlay
         koThreats.value = gameState.koThreats
       })
-      .catch((err) => (error.value = err))
+      .catch((err) => {
+        if (!isLatestInit()) {
+          return
+        }
+        error.value = err
+        busy.value = false
+      })
   }
 }
 

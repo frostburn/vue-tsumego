@@ -56,6 +56,7 @@ const sharedURLSplash = ref(false)
 let root = new State()
 const route = useRoute()
 const router = useRouter()
+let initRequestToken = 0
 
 const stateJSON = computed(() => gameState.toJSON())
 
@@ -192,40 +193,58 @@ async function doUndo() {
   busy.value = false
 }
 
-function init() {
+function isLatestInit(token: number) {
+  return token === initRequestToken
+}
+
+async function init() {
+  const token = ++initRequestToken
   busy.value = true
   done.value = false
   info.value = undefined
+  error.value = null
   undos.length = 0
-  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
-    .then((json) => {
-      maxThreats.value = Math.abs(json.root.koThreats)
-      gameState.assignFromJSON(json.root)
-      if (json.canStretch) {
-        gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
-      }
-      blackFlips.value = gameState.availableBlackFlips()
-      whiteFlips.value = gameState.availableWhiteFlips()
-      external.value = clone(gameState.external)
-      root = new State(gameState)
-      if (route.query?.s && !Array.isArray(route.query.s)) {
-        const state = decodeQuery(root, route.query.s)
-        json.state = state.toJSON()
-        gameState.assignFromJSON(json.state)
-      } else {
-        // Default to zero ko-threats
-        gameState.koThreats = 0
-        json.state = gameState.toJSON()
-      }
-      data.value = json
-      return json
-    })
-    .then((json) => getSolutionInfo(props.collection, { state: json.state! }))
-    .then((json) => {
-      info.value = json
-      busy.value = false
-    })
-    .catch((err) => (error.value = err))
+  try {
+    const json = await fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
+    if (!isLatestInit(token)) {
+      return
+    }
+    maxThreats.value = Math.abs(json.root.koThreats)
+    gameState.assignFromJSON(json.root)
+    if (json.canStretch) {
+      gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+    }
+    blackFlips.value = gameState.availableBlackFlips()
+    whiteFlips.value = gameState.availableWhiteFlips()
+    external.value = clone(gameState.external)
+    root = new State(gameState)
+    if (route.query?.s && !Array.isArray(route.query.s)) {
+      const state = decodeQuery(root, route.query.s)
+      json.state = state.toJSON()
+      gameState.assignFromJSON(json.state)
+    } else {
+      // Default to zero ko-threats
+      gameState.koThreats = 0
+      json.state = gameState.toJSON()
+    }
+    if (!isLatestInit(token)) {
+      return
+    }
+    data.value = json
+
+    const solution = await getSolutionInfo(props.collection, { state: json.state! })
+    if (!isLatestInit(token)) {
+      return
+    }
+    info.value = solution
+    busy.value = false
+  } catch (err) {
+    if (!isLatestInit(token)) {
+      return
+    }
+    error.value = err as Error
+    busy.value = false
+  }
 }
 
 onMounted(init)
