@@ -37,8 +37,9 @@ onMounted(() =>
       <RouterLink
         class="goban-container"
         :to="{ name: 'explore', params: { collection: props.collection } }"
+        aria-label="Explore and analyze the collection root state"
       >
-        <TheGoban :state="gameState" :busy="true" />
+        <TheGoban :state="gameState" :busy="true" :passive="true" />
       </RouterLink>
       <RouterLink
         class="explore"

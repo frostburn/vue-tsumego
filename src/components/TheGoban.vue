@@ -11,6 +11,7 @@ const props = defineProps<{
   solutionInfo?: SolutionInfo
   blackFlips?: Coords[]
   whiteFlips?: Coords[]
+  passive?: boolean
 }>()
 const emit = defineEmits(['play'])
 
@@ -232,7 +233,7 @@ function invalidateGuide() {
     height="100%"
     :viewBox="viewBox"
     xmlns="http://www.w3.org/2000/svg"
-    tabindex="0"
+    :tabindex="passive ? -1 : 0"
     role="application"
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"

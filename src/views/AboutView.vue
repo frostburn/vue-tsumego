@@ -197,7 +197,12 @@ rectangleEight.trim()
       </p>
 
       <div class="goban-container">
-        <TheGoban :state="rectangleEight" :busy="true" :solutionInfo="RECTANGLE_EIGHT_INFO" />
+        <TheGoban
+          :state="rectangleEight"
+          :busy="true"
+          :passive="true"
+          :solutionInfo="RECTANGLE_EIGHT_INFO"
+        />
       </div>
       <div class="controls">
         <button disabled :style="passStyle(RECTANGLE_EIGHT_INFO)">pass -8.0</button>
