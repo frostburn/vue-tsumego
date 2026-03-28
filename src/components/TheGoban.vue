@@ -15,8 +15,9 @@ const props = defineProps<{
 const emit = defineEmits(['play'])
 
 const activeTouchId = ref<number | null>(null)
-const guideX = ref(0)
-const guideY = ref(0)
+const guideActive = ref(false)
+const guideX = ref(-1)
+const guideY = ref(-1)
 
 const width = computed(() => props.state.width)
 const height = computed(() => props.state.height)
@@ -42,7 +43,7 @@ const spaces = computed<GridSpace[]>(
 )
 
 const guideLegal = computed(() => {
-  if (activeTouchId.value === null) {
+  if (!guideActive.value) {
     return false
   }
   if (props.blackFlips !== undefined) {
@@ -79,6 +80,16 @@ function fontSize(info: MoveInfo) {
   return `${(1.2 / contents.length).toFixed(4)}px`
 }
 
+function clampGuideToBoard() {
+  guideX.value = Math.max(0, Math.min(width.value - 1, guideX.value))
+  guideY.value = Math.max(0, Math.min(height.value - 1, guideY.value))
+}
+
+function activateGuide() {
+  guideActive.value = true
+  clampGuideToBoard()
+}
+
 // Temp variables for screen coords to SVG conversion
 let ctm: DOMMatrix | null = null
 let pt: SVGPoint | null = null
@@ -111,6 +122,7 @@ function onTouchStart(event: TouchEvent) {
     return
   }
   activeTouchId.value = event.changedTouches[0]!.identifier
+  guideActive.value = true
 
   ctm = svg.getScreenCTM()!.inverse()
   pt = svg.createSVGPoint()
@@ -141,9 +153,65 @@ function onTouchCancel(event: TouchEvent) {
   for (const touch of event.changedTouches) {
     if (touch.identifier === activeTouchId.value) {
       activeTouchId.value = null
+      guideActive.value = false
       return
     }
   }
+}
+
+function onFocus() {
+  guideActive.value = true
+  if (!guideLegal.value) {
+    // Try to start from a reasonable location
+    for (const y of [1, 0]) {
+      for (const x of [1, 2, 3, 4, 5, 6, 0]) {
+        guideX.value = x
+        guideY.value = y
+        if (guideLegal.value) {
+          return
+        }
+      }
+    }
+  }
+  clampGuideToBoard()
+}
+
+function onBlur() {
+  guideActive.value = false
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (props.busy) {
+    return
+  }
+
+  switch (event.key) {
+    case 'ArrowUp':
+      guideY.value--
+      break
+    case 'ArrowDown':
+      guideY.value++
+      break
+    case 'ArrowLeft':
+      guideX.value--
+      break
+    case 'ArrowRight':
+      guideX.value++
+      break
+    case ' ':
+    case 'Enter':
+      event.preventDefault()
+      activateGuide()
+      if (guideLegal.value) {
+        emit('play', guideX.value, guideY.value)
+      }
+      return
+    default:
+      return
+  }
+
+  event.preventDefault()
+  activateGuide()
 }
 </script>
 
@@ -153,10 +221,15 @@ function onTouchCancel(event: TouchEvent) {
     height="100%"
     :viewBox="viewBox"
     xmlns="http://www.w3.org/2000/svg"
+    tabindex="0"
+    role="application"
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"
     @touchend="onTouchEnd"
     @touchcancel="onTouchCancel"
+    @focus="onFocus"
+    @blur="onBlur"
+    @keydown="onKeydown"
   >
     <rect
       class="wood"
@@ -198,7 +271,7 @@ function onTouchCancel(event: TouchEvent) {
       r="0.4"
       :fill="stone.type"
     />
-    <g v-show="activeTouchId !== null">
+    <g v-show="guideActive">
       <line
         :class="{ guide: true, legal: guideLegal }"
         x1="-1"
