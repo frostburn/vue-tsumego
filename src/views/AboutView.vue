@@ -242,10 +242,14 @@ rectangleEight.trim()
         <li>
           Solver Engine <a href="https://github.com/frostburn/tinytsumego2">TinyTsumego v2</a>:
           <i>Lumi Pakkanen</i>
+          <br />
+          <i>GPT-5.3-Codex (OpenAI)</i>
         </li>
         <li>
           Front-end <a href="https://github.com/frostburn/vue-tsumego">VueTsumego</a>:
           <i>Lumi Pakkanen</i>
+          <br />
+          <i>GPT-5.3-Codex (OpenAI)</i>
         </li>
       </ul>
     </div>
