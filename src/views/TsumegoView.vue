@@ -22,6 +22,7 @@ import {
 import { useTsumegoStore } from '../stores/tsumego'
 import TheGoban from '../components/TheGoban.vue'
 import PlayerIndicator from '../components/PlayerIndicator.vue'
+import StatusIndicator from '../components/StatusIndicator.vue'
 
 const props = defineProps<{ collection: string; tsumego?: string }>()
 
@@ -267,6 +268,10 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
     >
     <span v-else class="sister-tsumego disabled">&#10095;|</span>
 
+    <div class="status-container">
+      <StatusIndicator :fail="fail" :success="success" />
+    </div>
+
     <p v-if="!data.state">Loading...</p>
     <template v-else>
       <div class="tsumego-layout">
@@ -348,6 +353,14 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 }
 .sister-tsumego.disabled.start {
   margin-left: 0.75em;
+}
+.status-container {
+  display: inline-block;
+  margin-left: 5em;
+  height: 3em;
+  width: 3em;
+  vertical-align: bottom;
+  padding-bottom: 0.4em;
 }
 .indicator-container {
   display: inline-block;
