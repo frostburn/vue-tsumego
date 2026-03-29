@@ -129,14 +129,21 @@ export async function fetchJson<T>(input: URL | RequestInfo, init?: RequestInit)
  * @param state State payload or full state object to serialize.
  * @returns Solver response including move scores and optional dead stones.
  */
-export async function getSolutionInfo(collection: string, state: State | { state: StateJSON }) {
+export async function getSolutionInfo(
+  collection: string,
+  state: State | { state: StateJSON },
+  init?: RequestInit,
+) {
   if (state instanceof State) {
     state = { state: state.toJSON() }
   }
+  const { headers, ...rest } = init ?? {}
   return await fetchJson<SolutionResponse>(new URL(`tsumego/${collection}/`, API_URL), {
+    ...rest,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...headers,
     },
     body: JSON.stringify(state),
   })
@@ -148,8 +155,8 @@ export async function getSolutionInfo(collection: string, state: State | { state
  * @param state Mutable state to update with server-provided dead stones.
  * @returns Resolves when dead-stone metadata has been applied.
  */
-export async function markDeadStones(collection: string, state: State) {
-  const json = await getSolutionInfo(collection, state)
+export async function markDeadStones(collection: string, state: State, init?: RequestInit) {
+  const json = await getSolutionInfo(collection, state, init)
   state.dead = arrayToStones(json.deadStones ?? [], state.height)
 }
 

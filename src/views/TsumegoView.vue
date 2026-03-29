@@ -92,13 +92,13 @@ const myPassStyle = computed(() => {
 
 const playerToMoveLabel = computed(() => (whiteToPlay.value ? 'White to play' : 'Black to play'))
 
-async function getInfo() {
-  const json = await getSolutionInfo(props.collection, { state: stateJSON.value })
+async function getInfo(signal?: AbortSignal) {
+  const json = await getSolutionInfo(props.collection, { state: stateJSON.value }, { signal })
   info.value = json
   return json
 }
 
-async function playForcingMove(json: SolutionInfo) {
+async function playForcingMove(json: SolutionInfo, signal?: AbortSignal) {
   const forcingMoves = []
   for (const move of json.moves) {
     if (move.forcing) {
@@ -118,12 +118,12 @@ async function playForcingMove(json: SolutionInfo) {
   }
   const r = gameState.makeMove(x, y)
   if (r == MoveResult.SecondPass) {
-    await markDeadStones(props.collection, gameState)
+    await markDeadStones(props.collection, gameState, { signal })
   }
   if (r <= MoveResult.TakeTarget) {
     return false
   }
-  await getInfo()
+  await getInfo(signal)
   return true
 }
 
@@ -227,7 +227,7 @@ function init() {
           throw new Error('No custom position found')
         }
       })
-      .then((json) => getSolutionInfo(props.collection, json))
+      .then((json) => getSolutionInfo(props.collection, json, { signal }))
       .then((json) => {
         info.value = json
         busy.value = false
@@ -247,14 +247,18 @@ function init() {
         }
         return json
       })
-      .then((json) => getSolutionInfo(props.collection, json))
+      .then((json) => getSolutionInfo(props.collection, json, { signal }))
       .then((json) => {
         info.value = json
         if (data.value.botToPlay) {
-          playForcingMove(json)
+          return playForcingMove(json, signal).then(() => undefined)
         }
+        return Promise.resolve()
       })
       .then(() => {
+        if (signal.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
         busy.value = false
         whiteToPlay.value = gameState.whiteToPlay
         koThreats.value = gameState.koThreats
