@@ -193,6 +193,7 @@ async function doUndo() {
 }
 
 function init() {
+  error.value = null
   busy.value = true
   done.value = false
   info.value = undefined
@@ -234,7 +235,8 @@ onMounted(init)
 <template>
   <main>
     <h1>{{ data.title }}</h1>
-    <p v-if="!data.state">Loading...</p>
+    <h2 v-if="error">{{ error.message }}</h2>
+    <p v-else-if="!data.state">Loading...</p>
     <template v-else>
       <div class="tsumego-layout">
         <section class="card board-card" aria-label="Board position">
@@ -376,7 +378,6 @@ onMounted(init)
         </div>
       </div>
     </template>
-    <h2 v-if="error">{{ error.message }}</h2>
   </main>
 </template>
 

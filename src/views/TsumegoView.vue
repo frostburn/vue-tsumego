@@ -180,6 +180,7 @@ async function doUndo() {
 }
 
 function init() {
+  error.value = null
   done.value = false
   success.value = false
   totalLoss.value = 0
@@ -273,7 +274,8 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
       <StatusIndicator :fail="totalLoss > 0" :success="success" />
     </div>
 
-    <p v-if="!data.state">Loading...</p>
+    <h2 v-if="error">{{ error.message }}</h2>
+    <p v-else-if="!data.state">Loading...</p>
     <template v-else>
       <div class="tsumego-layout">
         <section class="card board-card" aria-label="Board position">
@@ -339,7 +341,6 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
         </div>
       </div>
     </template>
-    <h2 v-if="error">{{ error.message }}</h2>
   </main>
 </template>
 

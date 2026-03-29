@@ -183,7 +183,11 @@ export function encode64(n: number): string {
 export function decode64(s: string): number {
   let result = 0
   for (let i = s.length - 1; i >= 0; --i) {
-    result = result * 64 + URL_SAFE_CHARS64.indexOf(s[i]!)
+    const digit = URL_SAFE_CHARS64.indexOf(s[i]!)
+    if (digit < 0) {
+      throw new Error(`Invalid query encoding: unexpected character "${s[i]}"`)
+    }
+    result = result * 64 + digit
   }
   return result
 }

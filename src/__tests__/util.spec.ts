@@ -48,6 +48,10 @@ describe('URL-safe number decoder', () => {
       expect(decode64(encode64(r))).toBe(r)
     }
   })
+
+  it('throws on invalid encoded characters', () => {
+    expect(() => decode64('!')).toThrow('Invalid query encoding')
+  })
 })
 
 describe('fetchJson', () => {
