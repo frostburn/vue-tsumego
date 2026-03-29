@@ -242,8 +242,11 @@ function init() {
       data.value = json
       return json
     })
-    .then((json) => getSolutionInfo(props.collection, { state: json.state! }))
+    .then((json) => getSolutionInfo(props.collection, { state: json.state! }, { signal }))
     .then((json) => {
+      if (signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
       info.value = json
       busy.value = false
     })
