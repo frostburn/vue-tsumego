@@ -51,7 +51,7 @@ const whiteFlips = ref<Coords[]>([])
 
 const sharedURL = ref('')
 
-const sharedURLSplash = ref(false)
+const sharedURLSplash = ref<'copied' | 'manual' | ''>('')
 
 let root = new State()
 const route = useRoute()
@@ -169,7 +169,7 @@ async function play(x: number, y: number) {
   busy.value = false
 }
 
-function sharePosition(name: string) {
+async function sharePosition(name: string) {
   const href = router.resolve({
     name,
     params: { collection: props.collection },
@@ -177,12 +177,18 @@ function sharePosition(name: string) {
   }).href
   sharedURL.value = new URL(href, window.location.origin).toString()
   if (window.navigator.clipboard) {
-    window.navigator.clipboard.writeText(sharedURL.value)
-    sharedURLSplash.value = true
-    window.setTimeout(() => {
-      sharedURLSplash.value = false
-    }, 3000)
+    try {
+      await window.navigator.clipboard.writeText(sharedURL.value)
+      sharedURLSplash.value = 'copied'
+    } catch {
+      sharedURLSplash.value = 'manual'
+    }
+  } else {
+    sharedURLSplash.value = 'manual'
   }
+  window.setTimeout(() => {
+    sharedURLSplash.value = ''
+  }, 3000)
 }
 
 async function doUndo() {
@@ -393,7 +399,12 @@ onMounted(init)
               v-model="sharedURL"
               readonly
             />
-            <p v-if="sharedURLSplash" class="status-message">URL copied to the clipboard</p>
+            <p v-if="sharedURLSplash === 'copied'" class="status-message">
+              URL copied to the clipboard
+            </p>
+            <p v-else-if="sharedURLSplash === 'manual'" class="status-message">
+              Could not copy automatically. Please copy the URL from the field above.
+            </p>
             <p v-if="done" class="status-message">Done</p>
           </section>
         </div>
