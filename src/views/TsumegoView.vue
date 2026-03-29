@@ -63,6 +63,12 @@ const route = useRoute()
 const tsumegoStore = useTsumegoStore()
 
 let initController: AbortController | null = null
+function getInitRequestInit(): RequestInit | undefined {
+  if (!initController) {
+    return undefined
+  }
+  return { signal: initController.signal }
+}
 
 const stateJSON = computed(() => gameState.toJSON())
 
@@ -92,13 +98,13 @@ const myPassStyle = computed(() => {
 
 const playerToMoveLabel = computed(() => (whiteToPlay.value ? 'White to play' : 'Black to play'))
 
-async function getInfo(signal?: AbortSignal) {
-  const json = await getSolutionInfo(props.collection, { state: stateJSON.value }, { signal })
+async function getInfo(init?: RequestInit) {
+  const json = await getSolutionInfo(props.collection, { state: stateJSON.value }, init ?? getInitRequestInit())
   info.value = json
   return json
 }
 
-async function playForcingMove(json: SolutionInfo, signal?: AbortSignal) {
+async function playForcingMove(json: SolutionInfo, init?: RequestInit) {
   const forcingMoves = []
   for (const move of json.moves) {
     if (move.forcing) {
@@ -118,12 +124,12 @@ async function playForcingMove(json: SolutionInfo, signal?: AbortSignal) {
   }
   const r = gameState.makeMove(x, y)
   if (r == MoveResult.SecondPass) {
-    await markDeadStones(props.collection, gameState, { signal })
+    await markDeadStones(props.collection, gameState, init ?? getInitRequestInit())
   }
   if (r <= MoveResult.TakeTarget) {
     return false
   }
-  await getInfo(signal)
+  await getInfo(init)
   return true
 }
 
@@ -145,7 +151,7 @@ async function play(x: number, y: number) {
   }
   undos.push(undo)
   if (r == MoveResult.SecondPass) {
-    await markDeadStones(props.collection, gameState)
+    await markDeadStones(props.collection, gameState, getInitRequestInit())
   }
   if (r <= MoveResult.TakeTarget) {
     done.value = true
@@ -207,10 +213,10 @@ function init() {
     initController.abort()
   }
   initController = new AbortController()
-  const signal = initController.signal
+  const requestInit = { signal: initController.signal }
 
   if (props.tsumego === undefined) {
-    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL), { signal })
+    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL), requestInit)
       .then((json) => {
         gameState.assignFromJSON(json.root)
         if (json.canStretch) {
@@ -227,7 +233,7 @@ function init() {
           throw new Error('No custom position found')
         }
       })
-      .then((json) => getSolutionInfo(props.collection, json, { signal }))
+      .then((json) => getSolutionInfo(props.collection, json, requestInit))
       .then((json) => {
         info.value = json
         busy.value = false
@@ -237,7 +243,7 @@ function init() {
       .catch(handleError)
   } else {
     fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL), {
-      signal,
+      signal: requestInit.signal,
     })
       .then((json) => {
         data.value = json
@@ -247,16 +253,16 @@ function init() {
         }
         return json
       })
-      .then((json) => getSolutionInfo(props.collection, json, { signal }))
+      .then((json) => getSolutionInfo(props.collection, json, requestInit))
       .then((json) => {
         info.value = json
         if (data.value.botToPlay) {
-          return playForcingMove(json, signal).then(() => undefined)
+          return playForcingMove(json, requestInit).then(() => undefined)
         }
         return Promise.resolve()
       })
       .then(() => {
-        if (signal.aborted) {
+        if (requestInit.signal.aborted) {
           throw new DOMException('Aborted', 'AbortError')
         }
         busy.value = false

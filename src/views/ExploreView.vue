@@ -58,6 +58,12 @@ const route = useRoute()
 const router = useRouter()
 
 let initController: AbortController | null = null
+function getInitRequestInit(): RequestInit | undefined {
+  if (!initController) {
+    return undefined
+  }
+  return { signal: initController.signal }
+}
 
 const stateJSON = computed(() => gameState.toJSON())
 
@@ -135,7 +141,7 @@ async function swapPlayers() {
 
 async function clearSharedURLAndGetInfo() {
   sharedURL.value = ''
-  info.value = await getSolutionInfo(props.collection, { state: stateJSON.value })
+  info.value = await getSolutionInfo(props.collection, { state: stateJSON.value }, getInitRequestInit())
 }
 
 async function play(x: number, y: number) {
@@ -152,7 +158,7 @@ async function play(x: number, y: number) {
     }
     undos.push(undo)
     if (r == MoveResult.SecondPass) {
-      await markDeadStones(props.collection, gameState)
+      await markDeadStones(props.collection, gameState, getInitRequestInit())
     }
     if (r <= MoveResult.TakeTarget) {
       done.value = true
@@ -217,9 +223,9 @@ function init() {
     initController.abort()
   }
   initController = new AbortController()
-  const signal = initController.signal
+  const requestInit = { signal: initController.signal }
 
-  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL), { signal })
+  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL), requestInit)
     .then((json) => {
       maxThreats.value = Math.abs(json.root.koThreats)
       gameState.assignFromJSON(json.root)
@@ -242,9 +248,9 @@ function init() {
       data.value = json
       return json
     })
-    .then((json) => getSolutionInfo(props.collection, { state: json.state! }, { signal }))
+    .then((json) => getSolutionInfo(props.collection, { state: json.state! }, requestInit))
     .then((json) => {
-      if (signal.aborted) {
+      if (requestInit.signal.aborted) {
         throw new DOMException('Aborted', 'AbortError')
       }
       info.value = json
