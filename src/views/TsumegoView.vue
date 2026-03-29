@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import('@/assets/tsumego.css')
-
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { rectangle } from '../core/bitboard'
@@ -20,10 +18,12 @@ import {
   type CollectionRootResponse,
   type TsumegoResponse,
 } from '../util'
+import { useAbortableRequest } from '../composables/useAbortableRequest'
 import { useTsumegoStore } from '../stores/tsumego'
 import TheGoban from '../components/TheGoban.vue'
 import PlayerIndicator from '../components/PlayerIndicator.vue'
 import StatusIndicator from '../components/StatusIndicator.vue'
+import TsumegoScaffold from '../components/TsumegoScaffold.vue'
 
 const props = defineProps<{ collection: string; tsumego?: string }>()
 
@@ -31,7 +31,7 @@ const data = ref<{ title: string; subtitle: string; state?: StateJSON; botToPlay
   title: props.collection,
   subtitle: props.tsumego ?? 'Custom Study',
 })
-const error = ref<Error | null>(null)
+const { error, getInitRequestInit, resetInitController, handleError } = useAbortableRequest()
 
 const done = ref(false)
 const success = ref(false)
@@ -61,14 +61,6 @@ let root = new State()
 const route = useRoute()
 
 const tsumegoStore = useTsumegoStore()
-
-let initController: AbortController | null = null
-function getInitRequestInit(): RequestInit | undefined {
-  if (!initController) {
-    return undefined
-  }
-  return { signal: initController.signal }
-}
 
 const stateJSON = computed(() => gameState.toJSON())
 
@@ -199,19 +191,6 @@ async function doUndo() {
   }
 }
 
-function handleError(err: any) {
-  if (err instanceof DOMException && err.name === 'AbortError') {
-    return
-  }
-  if (err instanceof Error) {
-    error.value = err
-  } else if (typeof err === 'string') {
-    error.value = new Error(err)
-  } else {
-    throw err
-  }
-}
-
 function init() {
   error.value = null
   done.value = false
@@ -222,12 +201,7 @@ function init() {
   playerInfo.value = undefined
   undos.length = 0
 
-  // Cancel previous initialization
-  if (initController) {
-    initController.abort()
-  }
-  initController = new AbortController()
-  const requestInit = { signal: initController.signal }
+  const requestInit = resetInitController()
 
   if (props.tsumego === undefined) {
     fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL), requestInit)
@@ -306,90 +280,87 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
 </script>
 
 <template>
-  <main>
-    <h1>{{ data.title }}: {{ data.subtitle }}</h1>
+  <TsumegoScaffold
+    :title="data.title"
+    :subtitle="data.subtitle"
+    :error="error"
+    :loading="!data.state"
+  >
+    <template #header-extra>
+      <RouterLink v-if="previous" class="sister-tsumego" :to="{ name: 'tsumego', params: previous }"
+        >&#10094;</RouterLink
+      >
+      <span v-else class="sister-tsumego disabled start">|&#10094;</span>
+      <RouterLink v-if="next" class="sister-tsumego" :to="{ name: 'tsumego', params: next }"
+        >&#10095;</RouterLink
+      >
+      <span v-else class="sister-tsumego disabled">&#10095;|</span>
 
-    <RouterLink v-if="previous" class="sister-tsumego" :to="{ name: 'tsumego', params: previous }"
-      >&#10094;</RouterLink
-    >
-    <span v-else class="sister-tsumego disabled start">|&#10094;</span>
-    <RouterLink v-if="next" class="sister-tsumego" :to="{ name: 'tsumego', params: next }"
-      >&#10095;</RouterLink
-    >
-    <span v-else class="sister-tsumego disabled">&#10095;|</span>
-
-    <div class="status-container">
-      <StatusIndicator :fail="totalLoss > 0" :success="success" />
-    </div>
-
-    <h2 v-if="error">{{ error.message }}</h2>
-    <p v-else-if="!data.state">Loading...</p>
-    <template v-else>
-      <div class="tsumego-layout">
-        <section class="card board-card" aria-label="Board position">
-          <div class="goban-container">
-            <TheGoban
-              :state="gameState"
-              :busy="busy || done"
-              :solutionInfo="showInfo ? playerInfo : undefined"
-              @play="play"
-            />
-          </div>
-        </section>
-
-        <div class="sidebar">
-          <section class="card" aria-labelledby="tsumego-controls-heading">
-            <h2 id="tsumego-controls-heading">Play Actions</h2>
-            <p class="section-help">Solve the problem by choosing local winning moves.</p>
-            <div class="button-row">
-              <button
-                class="action-button button-primary"
-                @click="play(-1, -1)"
-                :disabled="busy || done"
-                :style="myPassStyle"
-              >
-                pass {{ passGain }}
-              </button>
-              <button
-                class="action-button button-secondary undo"
-                @click="doUndo"
-                :disabled="!undos.length"
-              >
-                undo
-              </button>
-            </div>
-          </section>
-
-          <section class="card" aria-labelledby="tsumego-session-heading">
-            <h2 id="tsumego-session-heading">Session</h2>
-            <p class="section-help">Color to play and threat context for this problem.</p>
-            <div class="session-row">
-              <span class="indicator-container" aria-hidden="true">
-                <PlayerIndicator :whiteToPlay="whiteToPlay" />
-              </span>
-              <p class="turn-label">{{ playerToMoveLabel }}</p>
-            </div>
-            <p class="ko-threats-line">Ko-threats: {{ koThreats }}</p>
-          </section>
-
-          <section class="card" aria-labelledby="tsumego-status-heading">
-            <h2 id="tsumego-status-heading">Status</h2>
-            <p class="section-help">Track the current result and board reset controls.</p>
-            <p v-if="totalLoss" class="status-line">
-              <b>Failed:</b> {{ formatLoss(totalLoss) }} score lost in total
-            </p>
-            <p v-else-if="success" class="status-line">Success</p>
-            <p v-if="done" class="status-line">Done</p>
-            <div class="button-row">
-              <button class="action-button button-secondary" :disabled="busy" @click="init">
-                reset
-              </button>
-            </div>
-          </section>
-        </div>
+      <div class="status-container">
+        <StatusIndicator :fail="totalLoss > 0" :success="success" />
       </div>
     </template>
-  </main>
+
+    <template #board>
+      <TheGoban
+        :state="gameState"
+        :busy="busy || done"
+        :solutionInfo="showInfo ? playerInfo : undefined"
+        @play="play"
+      />
+    </template>
+
+    <template #sidebar>
+      <section class="card" aria-labelledby="tsumego-controls-heading">
+        <h2 id="tsumego-controls-heading">Play Actions</h2>
+        <p class="section-help">Solve the problem by choosing local winning moves.</p>
+        <div class="button-row">
+          <button
+            class="action-button button-primary"
+            @click="play(-1, -1)"
+            :disabled="busy || done"
+            :style="myPassStyle"
+          >
+            pass {{ passGain }}
+          </button>
+          <button
+            class="action-button button-secondary undo"
+            @click="doUndo"
+            :disabled="!undos.length"
+          >
+            undo
+          </button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="tsumego-session-heading">
+        <h2 id="tsumego-session-heading">Session</h2>
+        <p class="section-help">Color to play and threat context for this problem.</p>
+        <div class="session-row">
+          <span class="indicator-container" aria-hidden="true">
+            <PlayerIndicator :whiteToPlay="whiteToPlay" />
+          </span>
+          <p class="turn-label">{{ playerToMoveLabel }}</p>
+        </div>
+        <p class="ko-threats-line">Ko-threats: {{ koThreats }}</p>
+      </section>
+
+      <section class="card" aria-labelledby="tsumego-status-heading">
+        <h2 id="tsumego-status-heading">Status</h2>
+        <p class="section-help">Track the current result and board reset controls.</p>
+        <p v-if="totalLoss" class="status-line">
+          <b>Failed:</b> {{ formatLoss(totalLoss) }} score lost in total
+        </p>
+        <p v-else-if="success" class="status-line">Success</p>
+        <p v-if="done" class="status-line">Done</p>
+        <div class="button-row">
+          <button class="action-button button-secondary" :disabled="busy" @click="init">
+            reset
+          </button>
+        </div>
+      </section>
+    </template>
+  </TsumegoScaffold>
 </template>
 
 <style scoped>
