@@ -56,7 +56,7 @@ const sharedURLSplash = ref(false)
 let root = new State()
 const route = useRoute()
 const router = useRouter()
-let initRequestToken = 0
+let initAbortController: AbortController | null = null
 
 const stateJSON = computed(() => gameState.toJSON())
 
@@ -193,20 +193,20 @@ async function doUndo() {
   busy.value = false
 }
 
-function isLatestInit(token: number) {
-  return token === initRequestToken
-}
-
 async function init() {
-  const token = ++initRequestToken
+  initAbortController?.abort()
+  const abortController = new AbortController()
+  initAbortController = abortController
   busy.value = true
   done.value = false
   info.value = undefined
   error.value = null
   undos.length = 0
   try {
-    const json = await fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
-    if (!isLatestInit(token)) {
+    const json = await fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL), {
+      signal: abortController.signal,
+    })
+    if (abortController.signal.aborted || initAbortController !== abortController) {
       return
     }
     maxThreats.value = Math.abs(json.root.koThreats)
@@ -227,19 +227,25 @@ async function init() {
       gameState.koThreats = 0
       json.state = gameState.toJSON()
     }
-    if (!isLatestInit(token)) {
+    if (abortController.signal.aborted || initAbortController !== abortController) {
       return
     }
     data.value = json
 
-    const solution = await getSolutionInfo(props.collection, { state: json.state! })
-    if (!isLatestInit(token)) {
+    const solution = await getSolutionInfo(props.collection, { state: json.state! }, {
+      signal: abortController.signal,
+    })
+    if (abortController.signal.aborted || initAbortController !== abortController) {
       return
     }
     info.value = solution
     busy.value = false
   } catch (err) {
-    if (!isLatestInit(token)) {
+    if (
+      abortController.signal.aborted ||
+      initAbortController !== abortController ||
+      (err instanceof DOMException && err.name === 'AbortError')
+    ) {
       return
     }
     error.value = err as Error

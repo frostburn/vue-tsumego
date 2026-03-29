@@ -129,13 +129,19 @@ export async function fetchJson<T>(input: URL | RequestInfo, init?: RequestInit)
  * @param state State payload or full state object to serialize.
  * @returns Solver response including move scores and optional dead stones.
  */
-export async function getSolutionInfo(collection: string, state: State | { state: StateJSON }) {
+export async function getSolutionInfo(
+  collection: string,
+  state: State | { state: StateJSON },
+  init?: RequestInit,
+) {
   if (state instanceof State) {
     state = { state: state.toJSON() }
   }
   return await fetchJson<SolutionResponse>(new URL(`tsumego/${collection}/`, API_URL), {
+    ...init,
     method: 'POST',
     headers: {
+      ...(init?.headers ?? {}),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(state),

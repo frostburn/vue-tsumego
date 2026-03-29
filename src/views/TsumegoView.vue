@@ -59,7 +59,7 @@ const next = ref<{ collection: string; tsumego: string } | null>(null)
 
 let root = new State()
 const route = useRoute()
-let initRequestToken = 0
+let initAbortController: AbortController | null = null
 
 const tsumegoStore = useTsumegoStore()
 
@@ -180,9 +180,10 @@ async function doUndo() {
   busy.value = false
 }
 
-function init() {
-  const token = ++initRequestToken
-  const isLatestInit = () => token === initRequestToken
+async function init() {
+  initAbortController?.abort()
+  const abortController = new AbortController()
+  initAbortController = abortController
   done.value = false
   success.value = false
   totalLoss.value = 0
@@ -191,93 +192,79 @@ function init() {
   playerInfo.value = undefined
   error.value = null
   undos.length = 0
-  if (props.tsumego === undefined) {
-    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
-      .then((json) => {
-        if (!isLatestInit()) {
-          return undefined
-        }
-        gameState.assignFromJSON(json.root)
-        if (json.canStretch) {
-          gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
-        }
-        root = new State(gameState)
-        if (route.query?.s && !Array.isArray(route.query.s)) {
-          const queryState = decodeQuery(root, route.query.s)
-          const state = queryState.toJSON()
-          data.value = { title: json.title, subtitle: 'Custom Study', state }
-          gameState.assignFromJSON(state)
-          return { state }
-        } else {
-          throw new Error('No custom position found')
-        }
-      })
-      .then((json) => {
-        if (!json || !isLatestInit()) {
-          return undefined
-        }
-        return getSolutionInfo(props.collection, json)
-      })
-      .then((json) => {
-        if (!json || !isLatestInit()) {
+  try {
+    if (props.tsumego === undefined) {
+      const json = await fetchJson<CollectionRootResponse>(
+        new URL(`tsumego/${props.collection}/`, API_URL),
+        {
+          signal: abortController.signal,
+        },
+      )
+      if (abortController.signal.aborted || initAbortController !== abortController) {
+        return
+      }
+      gameState.assignFromJSON(json.root)
+      if (json.canStretch) {
+        gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+      }
+      root = new State(gameState)
+      if (route.query?.s && !Array.isArray(route.query.s)) {
+        const queryState = decodeQuery(root, route.query.s)
+        const state = queryState.toJSON()
+        data.value = { title: json.title, subtitle: 'Custom Study', state }
+        gameState.assignFromJSON(state)
+        const solution = await getSolutionInfo(props.collection, { state }, {
+          signal: abortController.signal,
+        })
+        if (abortController.signal.aborted || initAbortController !== abortController) {
           return
         }
-        info.value = json
-        busy.value = false
-        whiteToPlay.value = gameState.whiteToPlay
-        koThreats.value = gameState.koThreats
+        info.value = solution
+      } else {
+        throw new Error('No custom position found')
+      }
+    } else {
+      const json = await fetchJson<TsumegoResponse>(
+        new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL),
+        {
+          signal: abortController.signal,
+        },
+      )
+      if (abortController.signal.aborted || initAbortController !== abortController) {
+        return
+      }
+      data.value = json
+      gameState.assignFromJSON(json.state)
+      if (json.canStretch) {
+        gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
+      }
+      const solution = await getSolutionInfo(props.collection, json, {
+        signal: abortController.signal,
       })
-      .catch((err) => {
-        if (!isLatestInit()) {
+      if (abortController.signal.aborted || initAbortController !== abortController) {
+        return
+      }
+      info.value = solution
+      if (data.value.botToPlay) {
+        await playForcingMove(solution)
+        if (abortController.signal.aborted || initAbortController !== abortController) {
           return
         }
-        error.value = err
-        busy.value = false
-      })
-  } else {
-    fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
-      .then((json) => {
-        if (!isLatestInit()) {
-          return undefined
-        }
-        data.value = json
-        gameState.assignFromJSON(json.state)
-        if (json.canStretch) {
-          gameState.stretchTo(MIN_WIDTH, MIN_HEIGHT)
-        }
-        return json
-      })
-      .then((json) => {
-        if (!json || !isLatestInit()) {
-          return undefined
-        }
-        return getSolutionInfo(props.collection, json)
-      })
-      .then((json) => {
-        if (!json || !isLatestInit()) {
-          return undefined
-        }
-        info.value = json
-        if (data.value.botToPlay) {
-          return playForcingMove(json)
-        }
-        return undefined
-      })
-      .then(() => {
-        if (!isLatestInit()) {
-          return
-        }
-        busy.value = false
-        whiteToPlay.value = gameState.whiteToPlay
-        koThreats.value = gameState.koThreats
-      })
-      .catch((err) => {
-        if (!isLatestInit()) {
-          return
-        }
-        error.value = err
-        busy.value = false
-      })
+      }
+    }
+    busy.value = false
+    whiteToPlay.value = gameState.whiteToPlay
+    koThreats.value = gameState.koThreats
+  } catch (err) {
+    if (
+      abortController.signal.aborted ||
+      initAbortController !== abortController ||
+      (err instanceof DOMException && err.name === 'AbortError')
+    ) {
+      return
+    }
+    error.value = err as Error
+    busy.value = false
   }
 }
 
