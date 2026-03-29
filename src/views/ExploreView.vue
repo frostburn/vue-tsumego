@@ -459,4 +459,15 @@ onMounted(init)
 .status-message {
   margin: 0.55em 0 0;
 }
+
+button.swap {
+  padding-top: 0.1em;
+}
+
+button.swap::after {
+  content: '\2195';
+  vertical-align: -0.1em;
+  font-size: 1.6em;
+  font-weight: bold;
+}
 </style>
