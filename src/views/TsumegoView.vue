@@ -98,8 +98,12 @@ const myPassStyle = computed(() => {
 
 const playerToMoveLabel = computed(() => (whiteToPlay.value ? 'White to play' : 'Black to play'))
 
-async function getInfo(init?: RequestInit) {
-  const json = await getSolutionInfo(props.collection, { state: stateJSON.value }, init ?? getInitRequestInit())
+async function getInfo() {
+  const json = await getSolutionInfo(
+    props.collection,
+    { state: stateJSON.value },
+    getInitRequestInit(),
+  )
   info.value = json
   return json
 }
@@ -129,72 +133,82 @@ async function playForcingMove(json: SolutionInfo, init?: RequestInit) {
   if (r <= MoveResult.TakeTarget) {
     return false
   }
-  await getInfo(init)
+  await getInfo()
   return true
 }
 
 async function play(x: number, y: number) {
-  if (busy.value || done.value || info.value === undefined) {
-    return
-  }
-  busy.value = true
-  const undo: [StateJSON, number] = [stateJSON.value, totalLoss.value]
-  for (const move of info.value.moves) {
-    if (move.x === x && move.y === y && move.lowGain !== 0) {
-      totalLoss.value -= move.lowGain
+  try {
+    if (busy.value || done.value || info.value === undefined) {
+      return
     }
-  }
-  const r = gameState.makeMove(x, y)
-  if (r == MoveResult.Illegal) {
-    busy.value = false
-    return
-  }
-  undos.push(undo)
-  if (r == MoveResult.SecondPass) {
-    await markDeadStones(props.collection, gameState, getInitRequestInit())
-  }
-  if (r <= MoveResult.TakeTarget) {
-    done.value = true
-    success.value = true
-    busy.value = false
-    return
-  }
-  const json = await getInfo()
-  const keepGoing = await playForcingMove(json)
-  if (!keepGoing) {
-    done.value = true
-  }
-  for (const move of info.value.moves) {
-    if (move.x === -1 && move.lowGain === 0) {
+    busy.value = true
+    const undo: [StateJSON, number] = [stateJSON.value, totalLoss.value]
+    for (const move of info.value.moves) {
+      if (move.x === x && move.y === y && move.lowGain !== 0) {
+        totalLoss.value -= move.lowGain
+      }
+    }
+    const r = gameState.makeMove(x, y)
+    if (r == MoveResult.Illegal) {
+      busy.value = false
+      return
+    }
+    undos.push(undo)
+    if (r == MoveResult.SecondPass) {
+      await markDeadStones(props.collection, gameState, getInitRequestInit())
+    }
+    if (r <= MoveResult.TakeTarget) {
+      done.value = true
       success.value = true
+      busy.value = false
+      return
     }
+    const json = await getInfo()
+    const keepGoing = await playForcingMove(json)
+    if (!keepGoing) {
+      done.value = true
+    }
+    for (const move of info.value.moves) {
+      if (move.x === -1 && move.lowGain === 0) {
+        success.value = true
+      }
+    }
+    if (totalLoss.value > 0 || success.value) {
+      playerInfo.value = info.value
+    }
+    busy.value = false
+    koThreats.value = gameState.koThreats
+  } catch (err) {
+    handleError(err)
   }
-  if (totalLoss.value > 0 || success.value) {
-    playerInfo.value = info.value
-  }
-  busy.value = false
-  koThreats.value = gameState.koThreats
 }
 
 async function doUndo() {
-  const [undo, loss] = undos.pop()!
-  gameState.assignFromJSON(undo)
-  totalLoss.value = loss
-  success.value = false
-  done.value = false
-  busy.value = true
-  await getInfo()
-  busy.value = false
+  try {
+    const [undo, loss] = undos.pop()!
+    gameState.assignFromJSON(undo)
+    totalLoss.value = loss
+    success.value = false
+    done.value = false
+    busy.value = true
+    await getInfo()
+    busy.value = false
+  } catch (err) {
+    handleError(err)
+  }
 }
 
-function handleError(err: Error | string) {
+function handleError(err: any) {
   if (err instanceof DOMException && err.name === 'AbortError') {
     return
   }
   if (err instanceof Error) {
     error.value = err
-  } else {
+  } else if (typeof err === 'string') {
     error.value = new Error(err)
+  } else {
+    throw err
   }
 }
 
@@ -242,9 +256,10 @@ function init() {
       })
       .catch(handleError)
   } else {
-    fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL), {
-      signal: requestInit.signal,
-    })
+    fetchJson<TsumegoResponse>(
+      new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL),
+      requestInit,
+    )
       .then((json) => {
         data.value = json
         gameState.assignFromJSON(json.state)

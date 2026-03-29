@@ -141,38 +141,46 @@ async function swapPlayers() {
 
 async function clearSharedURLAndGetInfo() {
   sharedURL.value = ''
-  info.value = await getSolutionInfo(props.collection, { state: stateJSON.value }, getInitRequestInit())
+  info.value = await getSolutionInfo(
+    props.collection,
+    { state: stateJSON.value },
+    getInitRequestInit(),
+  )
 }
 
 async function play(x: number, y: number) {
-  if (busy.value || done.value) {
-    return
-  }
-  busy.value = true
-  const undo = stateJSON.value
-  if (playMode.value === 'play' || x < 0) {
-    const r = gameState.makeMove(x, y)
-    if (r == MoveResult.Illegal) {
-      busy.value = false
+  try {
+    if (busy.value || done.value) {
       return
     }
-    undos.push(undo)
-    if (r == MoveResult.SecondPass) {
-      await markDeadStones(props.collection, gameState, getInitRequestInit())
+    busy.value = true
+    const undo = stateJSON.value
+    if (playMode.value === 'play' || x < 0) {
+      const r = gameState.makeMove(x, y)
+      if (r == MoveResult.Illegal) {
+        busy.value = false
+        return
+      }
+      undos.push(undo)
+      if (r == MoveResult.SecondPass) {
+        await markDeadStones(props.collection, gameState, getInitRequestInit())
+      }
+      if (r <= MoveResult.TakeTarget) {
+        done.value = true
+        busy.value = false
+        return
+      }
+    } else {
+      gameState.flipStones(single(x, y), external.value, playMode.value === 'white')
+      undos.push(undo)
+      // Trigger `reactive()`
+      gameState.player = clone(gameState.player)
     }
-    if (r <= MoveResult.TakeTarget) {
-      done.value = true
-      busy.value = false
-      return
-    }
-  } else {
-    gameState.flipStones(single(x, y), external.value, playMode.value === 'white')
-    undos.push(undo)
-    // Trigger `reactive()`
-    gameState.player = clone(gameState.player)
+    await clearSharedURLAndGetInfo()
+    busy.value = false
+  } catch (err) {
+    handleError(err)
   }
-  await clearSharedURLAndGetInfo()
-  busy.value = false
 }
 
 async function sharePosition(name: string) {
@@ -198,22 +206,28 @@ async function sharePosition(name: string) {
 }
 
 async function doUndo() {
-  const undo = undos.pop()!
-  gameState.assignFromJSON(undo)
-  done.value = false
-  busy.value = true
-  await clearSharedURLAndGetInfo()
-  busy.value = false
+  try {
+    const undo = undos.pop()!
+    gameState.assignFromJSON(undo)
+    done.value = false
+    busy.value = true
+    await clearSharedURLAndGetInfo()
+    busy.value = false
+  } catch (err) {
+    handleError(err)
+  }
 }
 
-function handleError(err: Error | string) {
+function handleError(err: any) {
   if (err instanceof DOMException && err.name === 'AbortError') {
     return
   }
   if (err instanceof Error) {
     error.value = err
-  } else {
+  } else if (typeof err === 'string') {
     error.value = new Error(err)
+  } else {
+    throw err
   }
 }
 
