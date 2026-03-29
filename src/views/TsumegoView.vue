@@ -62,6 +62,8 @@ const route = useRoute()
 
 const tsumegoStore = useTsumegoStore()
 
+let initController: AbortController | null = null
+
 const stateJSON = computed(() => gameState.toJSON())
 
 const showInfo = computed(() => !done.value && (success.value || totalLoss.value > 0))
@@ -179,6 +181,17 @@ async function doUndo() {
   busy.value = false
 }
 
+function handleError(err: Error | string) {
+  if (err instanceof DOMException && err.name === 'AbortError') {
+    return
+  }
+  if (err instanceof Error) {
+    error.value = err
+  } else {
+    error.value = new Error(err)
+  }
+}
+
 function init() {
   error.value = null
   done.value = false
@@ -188,8 +201,16 @@ function init() {
   info.value = undefined
   playerInfo.value = undefined
   undos.length = 0
+
+  // Cancel previous initialization
+  if (initController) {
+    initController.abort()
+  }
+  initController = new AbortController()
+  const signal = initController.signal
+
   if (props.tsumego === undefined) {
-    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
+    fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL), { signal })
       .then((json) => {
         gameState.assignFromJSON(json.root)
         if (json.canStretch) {
@@ -213,9 +234,11 @@ function init() {
         whiteToPlay.value = gameState.whiteToPlay
         koThreats.value = gameState.koThreats
       })
-      .catch((err) => (error.value = err))
+      .catch(handleError)
   } else {
-    fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL))
+    fetchJson<TsumegoResponse>(new URL(`tsumego/${props.collection}/${props.tsumego}/`, API_URL), {
+      signal,
+    })
       .then((json) => {
         data.value = json
         gameState.assignFromJSON(json.state)
@@ -236,7 +259,7 @@ function init() {
         whiteToPlay.value = gameState.whiteToPlay
         koThreats.value = gameState.koThreats
       })
-      .catch((err) => (error.value = err))
+      .catch(handleError)
   }
 }
 

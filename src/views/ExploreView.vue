@@ -57,6 +57,8 @@ let root = new State()
 const route = useRoute()
 const router = useRouter()
 
+let initController: AbortController | null = null
+
 const stateJSON = computed(() => gameState.toJSON())
 
 const passGain = computed(() => {
@@ -192,13 +194,32 @@ async function doUndo() {
   busy.value = false
 }
 
+function handleError(err: Error | string) {
+  if (err instanceof DOMException && err.name === 'AbortError') {
+    return
+  }
+  if (err instanceof Error) {
+    error.value = err
+  } else {
+    error.value = new Error(err)
+  }
+}
+
 function init() {
   error.value = null
   busy.value = true
   done.value = false
   info.value = undefined
   undos.length = 0
-  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL))
+
+  // Cancel previous initialization
+  if (initController) {
+    initController.abort()
+  }
+  initController = new AbortController()
+  const signal = initController.signal
+
+  fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL), { signal })
     .then((json) => {
       maxThreats.value = Math.abs(json.root.koThreats)
       gameState.assignFromJSON(json.root)
@@ -226,7 +247,7 @@ function init() {
       info.value = json
       busy.value = false
     })
-    .catch((err) => (error.value = err))
+    .catch(handleError)
 }
 
 onMounted(init)
