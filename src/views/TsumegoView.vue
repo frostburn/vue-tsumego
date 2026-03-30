@@ -31,7 +31,7 @@ const data = ref<{ title: string; subtitle: string; state?: StateJSON; botToPlay
   title: props.collection,
   subtitle: props.tsumego ?? 'Custom Study',
 })
-const { error, getInitRequestInit, resetInitController, handleError } = useAbortableRequest()
+const { error, getRequestInit, resetController, handleError } = useAbortableRequest()
 
 const done = ref(false)
 const success = ref(false)
@@ -94,7 +94,7 @@ async function getInfo() {
   const json = await getSolutionInfo(
     props.collection,
     { state: stateJSON.value },
-    getInitRequestInit(),
+    getRequestInit(),
   )
   info.value = json
   return json
@@ -120,7 +120,7 @@ async function playForcingMove(json: SolutionInfo, init?: RequestInit) {
   }
   const r = gameState.makeMove(x, y)
   if (r == MoveResult.SecondPass) {
-    await markDeadStones(props.collection, gameState, init ?? getInitRequestInit())
+    await markDeadStones(props.collection, gameState, init ?? getRequestInit())
   }
   if (r <= MoveResult.TakeTarget) {
     return false
@@ -148,7 +148,7 @@ async function play(x: number, y: number) {
     }
     undos.push(undo)
     if (r == MoveResult.SecondPass) {
-      await markDeadStones(props.collection, gameState, getInitRequestInit())
+      await markDeadStones(props.collection, gameState, getRequestInit())
     }
     if (r <= MoveResult.TakeTarget) {
       done.value = true
@@ -201,7 +201,7 @@ function init() {
   playerInfo.value = undefined
   undos.length = 0
 
-  const requestInit = resetInitController()
+  const requestInit = resetController()
 
   if (props.tsumego === undefined) {
     fetchJson<CollectionRootResponse>(new URL(`tsumego/${props.collection}/`, API_URL), requestInit)

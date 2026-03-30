@@ -28,7 +28,7 @@ const props = defineProps<{ collection: string }>()
 const data = ref<{ title: string; state?: StateJSON }>({
   title: props.collection,
 })
-const { error, getInitRequestInit, resetInitController, handleError } = useAbortableRequest()
+const { error, getRequestInit, resetController, handleError } = useAbortableRequest()
 
 const busy = ref(true)
 const done = ref(false)
@@ -136,7 +136,7 @@ async function clearSharedURLAndGetInfo() {
   info.value = await getSolutionInfo(
     props.collection,
     { state: stateJSON.value },
-    getInitRequestInit(),
+    getRequestInit(),
   )
 }
 
@@ -155,7 +155,7 @@ async function play(x: number, y: number) {
       }
       undos.push(undo)
       if (r == MoveResult.SecondPass) {
-        await markDeadStones(props.collection, gameState, getInitRequestInit())
+        await markDeadStones(props.collection, gameState, getRequestInit())
       }
       if (r <= MoveResult.TakeTarget) {
         done.value = true
@@ -217,7 +217,7 @@ function init() {
   info.value = undefined
   undos.length = 0
 
-  const requestInit = resetInitController()
+  const requestInit = resetController()
 
   fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL), requestInit)
     .then((json) => {
