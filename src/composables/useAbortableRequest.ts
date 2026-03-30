@@ -2,21 +2,21 @@ import { ref } from 'vue'
 
 export function useAbortableRequest() {
   const error = ref<Error | null>(null)
-  let initController: AbortController | null = null
+  let controller: AbortController | null = null
 
-  function getInitRequestInit(): RequestInit | undefined {
-    if (!initController) {
+  function getRequestInit(): RequestInit | undefined {
+    if (!controller) {
       return undefined
     }
-    return { signal: initController.signal }
+    return { signal: controller.signal }
   }
 
-  function resetInitController() {
-    if (initController) {
-      initController.abort()
+  function resetController() {
+    if (controller) {
+      controller.abort()
     }
-    initController = new AbortController()
-    return { signal: initController.signal }
+    controller = new AbortController()
+    return { signal: controller.signal }
   }
 
   function handleError(err: unknown) {
@@ -36,8 +36,8 @@ export function useAbortableRequest() {
 
   return {
     error,
-    getInitRequestInit,
-    resetInitController,
+    getRequestInit,
+    resetController,
     handleError,
   }
 }
