@@ -1,3 +1,38 @@
+<script setup lang="ts">
+defineProps<{
+  title: string
+  subtitle?: string
+  error: Error | null
+  loading: boolean
+}>()
+</script>
+
+<template>
+  <main>
+    <h1>
+      {{ title }}<template v-if="subtitle">: {{ subtitle }}</template>
+    </h1>
+    <slot name="header-extra" />
+
+    <h2 v-if="error">{{ error.message }}</h2>
+    <p v-else-if="loading">Loading...</p>
+    <template v-else>
+      <div class="tsumego-layout">
+        <section class="card board-card" aria-label="Board position">
+          <div class="goban-container">
+            <slot name="board" />
+          </div>
+        </section>
+
+        <div class="sidebar">
+          <slot name="sidebar" />
+        </div>
+      </div>
+    </template>
+  </main>
+</template>
+
+<style>
 .tsumego-layout {
   --tsumego-gap: 0.6rem;
   --tsumego-card-padding: 0.75rem;
@@ -88,22 +123,16 @@ button {
   min-width: 5em;
   height: 3em;
 }
+
 button.undo:disabled {
   color: var(--color-button-border);
   background: var(--color-background-soft);
 }
+
 button.undo::after {
   content: '\0238C';
   vertical-align: -0.1em;
   font-size: 1.5em;
   font-weight: bold;
 }
-button.swap {
-  padding-top: 0.1em;
-}
-button.swap::after {
-  content: '\2195';
-  vertical-align: -0.1em;
-  font-size: 1.6em;
-  font-weight: bold;
-}
+</style>

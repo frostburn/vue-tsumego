@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import('@/assets/tsumego.css')
-
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type Coords, rectangle, single, clone, emptyStones } from '../core/bitboard'
@@ -19,16 +17,18 @@ import {
   decodeQuery,
   type ExploreResponse,
 } from '../util'
+import { useAbortableRequest } from '../composables/useAbortableRequest'
 import TheGoban from '../components/TheGoban.vue'
 import ButtonBar from '../components/ButtonBar.vue'
 import NumericSlider from '../components/NumericSlider.vue'
+import TsumegoScaffold from '../components/TsumegoScaffold.vue'
 
 const props = defineProps<{ collection: string }>()
 
 const data = ref<{ title: string; state?: StateJSON }>({
   title: props.collection,
 })
-const error = ref<Error | null>(null)
+const { error, getInitRequestInit, resetInitController, handleError } = useAbortableRequest()
 
 const busy = ref(true)
 const done = ref(false)
@@ -56,14 +56,6 @@ const sharedURLSplash = ref<'copied' | 'manual' | ''>('')
 let root = new State()
 const route = useRoute()
 const router = useRouter()
-
-let initController: AbortController | null = null
-function getInitRequestInit(): RequestInit | undefined {
-  if (!initController) {
-    return undefined
-  }
-  return { signal: initController.signal }
-}
 
 const stateJSON = computed(() => gameState.toJSON())
 
@@ -218,19 +210,6 @@ async function doUndo() {
   }
 }
 
-function handleError(err: any) {
-  if (err instanceof DOMException && err.name === 'AbortError') {
-    return
-  }
-  if (err instanceof Error) {
-    error.value = err
-  } else if (typeof err === 'string') {
-    error.value = new Error(err)
-  } else {
-    throw err
-  }
-}
-
 function init() {
   error.value = null
   busy.value = true
@@ -238,12 +217,7 @@ function init() {
   info.value = undefined
   undos.length = 0
 
-  // Cancel previous initialization
-  if (initController) {
-    initController.abort()
-  }
-  initController = new AbortController()
-  const requestInit = { signal: initController.signal }
+  const requestInit = resetInitController()
 
   fetchJson<ExploreResponse>(new URL(`tsumego/${props.collection}/`, API_URL), requestInit)
     .then((json) => {
@@ -283,157 +257,148 @@ onMounted(init)
 </script>
 
 <template>
-  <main>
-    <h1>{{ data.title }}</h1>
-    <h2 v-if="error">{{ error.message }}</h2>
-    <p v-else-if="!data.state">Loading...</p>
-    <template v-else>
-      <div class="tsumego-layout">
-        <section class="card board-card" aria-label="Board position">
-          <div class="goban-container">
-            <TheGoban
-              :state="gameState"
-              :busy="busy || done"
-              :solutionInfo="done ? undefined : info"
-              :blackFlips="playMode === 'black' ? blackFlips : undefined"
-              :whiteFlips="playMode === 'white' ? whiteFlips : undefined"
-              @play="play"
+  <TsumegoScaffold :title="data.title" :error="error" :loading="!data.state">
+    <template #board>
+      <TheGoban
+        :state="gameState"
+        :busy="busy || done"
+        :solutionInfo="done ? undefined : info"
+        :blackFlips="playMode === 'black' ? blackFlips : undefined"
+        :whiteFlips="playMode === 'white' ? whiteFlips : undefined"
+        @play="play"
+      />
+    </template>
+
+    <template #sidebar>
+      <section class="card" aria-labelledby="play-actions-heading">
+        <h2 id="play-actions-heading">Play Actions</h2>
+        <p class="section-help">Core controls for stepping through the position.</p>
+        <div class="button-row">
+          <button
+            class="action-button button-primary"
+            @click="play(-1, -1)"
+            :disabled="busy || done"
+            :style="myPassStyle"
+          >
+            pass {{ passGain }}
+          </button>
+          <button
+            class="swap action-button button-secondary"
+            @click="swapPlayers"
+            :disabled="busy || done"
+          >
+            swap colors
+          </button>
+          <button
+            class="undo action-button button-secondary"
+            @click="doUndo"
+            :disabled="!undos.length"
+          >
+            undo
+          </button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="edit-mode-heading">
+        <h2 id="edit-mode-heading">Edit Mode</h2>
+        <p class="section-help">Switch between normal play and manual stone editing.</p>
+        <div class="button-bar-container">
+          <ButtonBar :whiteToPlay="gameState.whiteToPlay" v-model="playMode" />
+        </div>
+        <p class="mode-label">{{ playModeLabel }}</p>
+        <p class="section-help">{{ playModeHelp }}</p>
+      </section>
+
+      <section class="card" aria-labelledby="position-params-heading">
+        <h2 id="position-params-heading">Position Params</h2>
+        <p class="section-help">Tune ko-threat count and button state for this setup.</p>
+        <div class="param-grid">
+          <div class="param-field">
+            <label for="ko-threats">Ko-threats</label>
+            <div class="stepper">
+              <input
+                id="ko-threats"
+                v-model="gameState.koThreats"
+                :disabled="busy || done"
+                :min="-maxThreats"
+                :max="maxThreats"
+                @change="onStateChange"
+                type="number"
+                step="1"
+              />
+              <button
+                type="button"
+                class="stepper-button button-tertiary"
+                :disabled="busy || done || gameState.koThreats === -maxThreats"
+                @click="incThreats(-1)"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                class="stepper-button button-tertiary"
+                :disabled="busy || done || gameState.koThreats === maxThreats"
+                @click="incThreats(+1)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div class="param-field">
+            <label for="button">{{ buttonLabel }}</label>
+            <NumericSlider
+              id="button"
+              v-model="buttonModel"
+              :disabled="busy || done"
+              :min="-1"
+              :max="1"
+              :step="1"
+              @change="onStateChange"
             />
           </div>
-        </section>
-
-        <div class="sidebar">
-          <section class="card" aria-labelledby="play-actions-heading">
-            <h2 id="play-actions-heading">Play Actions</h2>
-            <p class="section-help">Core controls for stepping through the position.</p>
-            <div class="button-row">
-              <button
-                class="action-button button-primary"
-                @click="play(-1, -1)"
-                :disabled="busy || done"
-                :style="myPassStyle"
-              >
-                pass {{ passGain }}
-              </button>
-              <button
-                class="swap action-button button-secondary"
-                @click="swapPlayers"
-                :disabled="busy || done"
-              >
-                swap colors
-              </button>
-              <button
-                class="undo action-button button-secondary"
-                @click="doUndo"
-                :disabled="!undos.length"
-              >
-                undo
-              </button>
-            </div>
-          </section>
-
-          <section class="card" aria-labelledby="edit-mode-heading">
-            <h2 id="edit-mode-heading">Edit Mode</h2>
-            <p class="section-help">Switch between normal play and manual stone editing.</p>
-            <div class="button-bar-container">
-              <ButtonBar :whiteToPlay="gameState.whiteToPlay" v-model="playMode" />
-            </div>
-            <p class="mode-label">{{ playModeLabel }}</p>
-            <p class="section-help">{{ playModeHelp }}</p>
-          </section>
-
-          <section class="card" aria-labelledby="position-params-heading">
-            <h2 id="position-params-heading">Position Params</h2>
-            <p class="section-help">Tune ko-threat count and button state for this setup.</p>
-            <div class="param-grid">
-              <div class="param-field">
-                <label for="ko-threats">Ko-threats</label>
-                <div class="stepper">
-                  <input
-                    id="ko-threats"
-                    v-model="gameState.koThreats"
-                    :disabled="busy || done"
-                    :min="-maxThreats"
-                    :max="maxThreats"
-                    @change="onStateChange"
-                    type="number"
-                    step="1"
-                  />
-                  <button
-                    type="button"
-                    class="stepper-button button-tertiary"
-                    :disabled="busy || done || gameState.koThreats === -maxThreats"
-                    @click="incThreats(-1)"
-                  >
-                    -
-                  </button>
-                  <button
-                    type="button"
-                    class="stepper-button button-tertiary"
-                    :disabled="busy || done || gameState.koThreats === maxThreats"
-                    @click="incThreats(+1)"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div class="param-field">
-                <label for="button">{{ buttonLabel }}</label>
-                <NumericSlider
-                  id="button"
-                  v-model="buttonModel"
-                  :disabled="busy || done"
-                  :min="-1"
-                  :max="1"
-                  :step="1"
-                  @change="onStateChange"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section class="card" aria-labelledby="session-heading">
-            <h2 id="session-heading">Session</h2>
-            <p class="section-help">Reset the board or copy links to share your work.</p>
-            <div class="button-row">
-              <button class="action-button button-secondary" @click="init" :disabled="busy">
-                reset
-              </button>
-              <button
-                class="action-button button-secondary"
-                @click="sharePosition('explore')"
-                :disabled="busy"
-              >
-                share position
-              </button>
-              <button
-                class="action-button button-secondary"
-                @click="sharePosition('custom-tsumego')"
-                :disabled="busy"
-              >
-                share problem
-              </button>
-            </div>
-            <input
-              class="shared-url"
-              v-if="sharedURL.length"
-              type="text"
-              v-model="sharedURL"
-              readonly
-            />
-            <p v-if="sharedURLSplash === 'copied'" class="status-message">
-              URL copied to the clipboard
-            </p>
-            <p v-else-if="sharedURLSplash === 'manual'" class="status-message">
-              Could not copy automatically. Please copy the URL from the field above.
-            </p>
-            <p v-if="done" class="status-message">Done</p>
-          </section>
         </div>
-      </div>
+      </section>
+
+      <section class="card" aria-labelledby="session-heading">
+        <h2 id="session-heading">Session</h2>
+        <p class="section-help">Reset the board or copy links to share your work.</p>
+        <div class="button-row">
+          <button class="action-button button-secondary" @click="init" :disabled="busy">
+            reset
+          </button>
+          <button
+            class="action-button button-secondary"
+            @click="sharePosition('explore')"
+            :disabled="busy"
+          >
+            share position
+          </button>
+          <button
+            class="action-button button-secondary"
+            @click="sharePosition('custom-tsumego')"
+            :disabled="busy"
+          >
+            share problem
+          </button>
+        </div>
+        <input
+          class="shared-url"
+          v-if="sharedURL.length"
+          type="text"
+          v-model="sharedURL"
+          readonly
+        />
+        <p v-if="sharedURLSplash === 'copied'" class="status-message">
+          URL copied to the clipboard
+        </p>
+        <p v-else-if="sharedURLSplash === 'manual'" class="status-message">
+          Could not copy automatically. Please copy the URL from the field above.
+        </p>
+        <p v-if="done" class="status-message">Done</p>
+      </section>
     </template>
-  </main>
+  </TsumegoScaffold>
 </template>
 
 <style scoped>
@@ -493,5 +458,16 @@ onMounted(init)
 
 .status-message {
   margin: 0.55em 0 0;
+}
+
+button.swap {
+  padding-top: 0.1em;
+}
+
+button.swap::after {
+  content: '\2195';
+  vertical-align: -0.1em;
+  font-size: 1.6em;
+  font-weight: bold;
 }
 </style>
