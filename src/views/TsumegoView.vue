@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { rectangle } from '../core/bitboard'
 import { type StateJSON, MoveResult, State } from '../core/state'
 import { type SolutionInfo } from '../core/solver'
@@ -59,6 +59,7 @@ const next = ref<{ collection: string; tsumego: string } | null>(null)
 
 let root = new State()
 const route = useRoute()
+const router = useRouter()
 
 const tsumegoStore = useTsumegoStore()
 
@@ -91,11 +92,7 @@ const myPassStyle = computed(() => {
 const playerToMoveLabel = computed(() => (whiteToPlay.value ? 'White to play' : 'Black to play'))
 
 async function getInfo() {
-  const json = await getSolutionInfo(
-    props.collection,
-    { state: stateJSON.value },
-    getRequestInit(),
-  )
+  const json = await getSolutionInfo(props.collection, { state: stateJSON.value }, getRequestInit())
   info.value = json
   return json
 }
@@ -272,6 +269,14 @@ async function updateSisterLinks() {
   }
 }
 
+function onStatusClick() {
+  if (totalLoss.value > 0) {
+    init()
+  } else if (success.value && next.value) {
+    router.push({ name: 'tsumego', params: next.value })
+  }
+}
+
 onMounted(init)
 onMounted(updateSisterLinks)
 
@@ -287,16 +292,26 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
     :loading="!data.state"
   >
     <template #header-extra>
-      <RouterLink v-if="previous" class="sister-tsumego" :to="{ name: 'tsumego', params: previous }"
+      <RouterLink
+        v-if="previous"
+        title="Go to previous problem"
+        class="sister-tsumego"
+        :to="{ name: 'tsumego', params: previous }"
         >&#10094;</RouterLink
       >
-      <span v-else class="sister-tsumego disabled start">|&#10094;</span>
-      <RouterLink v-if="next" class="sister-tsumego" :to="{ name: 'tsumego', params: next }"
+      <span v-else title="No previous problem available" class="sister-tsumego disabled start"
+        >|&#10094;</span
+      >
+      <RouterLink
+        v-if="next"
+        title="Go to next problem"
+        class="sister-tsumego"
+        :to="{ name: 'tsumego', params: next }"
         >&#10095;</RouterLink
       >
-      <span v-else class="sister-tsumego disabled">&#10095;|</span>
+      <span v-else title="Final problem reached" class="sister-tsumego disabled">&#10095;|</span>
 
-      <div class="status-container">
+      <div class="status-container" @click="onStatusClick">
         <StatusIndicator :fail="totalLoss > 0" :success="success" />
       </div>
     </template>
@@ -349,7 +364,7 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
         <h2 id="tsumego-status-heading">Status</h2>
         <p class="section-help">Track the current result and board reset controls.</p>
         <p v-if="totalLoss" class="status-line">
-          <b>Failed:</b> {{ formatLoss(totalLoss) }} score lost in total
+          <b>Failed:</b> {{ formatLoss(totalLoss) }} points lost in total
         </p>
         <p v-else-if="success" class="status-line">Success</p>
         <p v-if="done" class="status-line">Done</p>

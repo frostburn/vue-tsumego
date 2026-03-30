@@ -133,11 +133,7 @@ async function swapPlayers() {
 
 async function clearSharedURLAndGetInfo() {
   sharedURL.value = ''
-  info.value = await getSolutionInfo(
-    props.collection,
-    { state: stateJSON.value },
-    getRequestInit(),
-  )
+  info.value = await getSolutionInfo(props.collection, { state: stateJSON.value }, getRequestInit())
 }
 
 async function play(x: number, y: number) {
