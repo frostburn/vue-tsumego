@@ -269,7 +269,10 @@ async function updateSisterLinks() {
   }
 }
 
-function onStatusClick() {
+function onStatusClick(event: Event) {
+  if (event instanceof KeyboardEvent && event.key !== 'Enter') {
+    return
+  }
   if (totalLoss.value > 0) {
     init()
   } else if (success.value && next.value) {
@@ -311,7 +314,12 @@ watch(() => [props.collection, props.tsumego], updateSisterLinks)
       >
       <span v-else title="Final problem reached" class="sister-tsumego disabled">&#10095;|</span>
 
-      <div class="status-container" @click="onStatusClick">
+      <div
+        class="status-container"
+        :tabindex="success || totalLoss ? 0 : -1"
+        @click="onStatusClick"
+        @keydown="onStatusClick"
+      >
         <StatusIndicator :fail="totalLoss > 0" :success="success" />
       </div>
     </template>
